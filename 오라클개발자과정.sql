@@ -18,6 +18,8 @@
 7. 현재 접속 계정확인
 show user;
 
+alter session set nls_date_format='YYYY-MM-DD HH24:MI:SS';
+
 
 CREATE TABLE EMP
 (EMPNO number not null,
@@ -450,3 +452,520 @@ SELECT DEPTNO, DNAME, LOC, NULL FROM DEPT;
 
 -- 초보 기초과정 완료
 -----------------------------------------------------------------------------
+
+
+SELECT * FROM NLS_DATABASE_PARAMETERS WHERE PARAMETER = 'NLS_CHARACTERSET'; 
+
+--[2일차]
+--오라클 함수
+
+/*
+단일행 함수의 종류 p.49
+1) 문자형 함수 : 문자를 입력받고 문자와 숫자 값 모두를 return할 수 있다.
+2) 숫자형 함수 : 숫자를 입력받고 
+3) 날짜형 함수
+4) 변환형 함수
+5) 일반적인 함수
+*/
+
+-- 문자열 함수
+SELECT INITCAP('the super man') from dual;
+SELECT LOWER('AAA'), UPPER('aaaa') FROM DUAL;
+SELECT LENGTH('abcd') FROM DUAL;
+
+-- 결합연산자 ||
+-- CONCAT()
+
+SELECT 'A'||'B'||'C' as "DATA" FROM DUAL;
+SELECT CONCAT('A','B') FROM DUAL;
+
+SELECT CONCAT(ENAME, JOB) FROM EMP;
+SELECT ENAME || '    '|| JOB FROM EMP;
+
+-- 부분 문자열 추출
+-- JAVA(SUBSTRING)
+-- ORACLE (SUBSTR)
+SELECT SUBSTR('ABCDE',2,3) FROM DUAL;
+SELECT SUBSTR('ABCDE',3,1) FROM DUAL;
+SELECT SUBSTR('ABCDE',3) FROM DUAL;     -- 3번째 뒤 다
+SELECT SUBSTR('ABCDE',-2,1) FROM DUAL;  -- 뒤에서 2번째에서 1글자
+
+/*
+ 사원테이블에서 ENAME 컬럼 데이터에 대해서 첫글자는 소문자로 나머지글자는 대문자로 출력하되
+하나의 컬럼으로 출력하세요
+-- 컬럼의 가명칭은 : FULLNAME
+-- 첫글자와 나머지 문자사이에 공백하나를 넣으세요
+*/
+SELECT LOWER(SUBSTR(ENAME,1,1))||' '||UPPER(SUBSTR(ENAME,2)) as "FULLNAME" FROM EMP;
+
+-- LPAD (왼쪽 채우기) , RPAD( 오른쪽 채우기)
+SELECT LPAD('ABC',10,'*') FROM DUAL;
+SELECT RPAD('ABC',10,'*') FROM DUAL;
+
+-- QUIZ
+-- 사용자비번 : hong1006
+-- 화면 ho***** 
+SELECT RPAD(SUBSTR('hong1006',1,2),LENGTH('hong1006'), '*') as "PASSOWRD" FROM DUAL;
+SELECT RPAD(SUBSTR('1004',1,2),LENGTH('1004'), '*') as PASSWORD FROM DUAL;
+
+-- EMP 테이블에서 ENAME컬럽의 데이터를 출력하는데 첫글자만 출력하고 나머지는 '*'로 표시하세요
+SELECT RPAD(SUBSTR(ENAME,1,1),LENGTH(ENAME), '*')  FROM BITUSER.EMP;
+
+
+CREATE TABLE MEMBER2 (
+ ID NUMBER,
+ JUMIN VARCHAR2(14)
+);
+
+INSERT INTO MEMBER2 (ID, JUMIN) VALUES(100, '123456-1234567');
+INSERT INTO MEMBER2 (ID, JUMIN) VALUES(200, '234567-1234567');
+COMMIT;
+
+SELECT * FROM MEMBER2;
+
+SELECT ID||':'||RPAD(SUBSTR(JUMIN,1,7),LENGTH(JUMIN), '*') AS JUMINNUMBER FROM MEMBER2;
+
+-- RTRIM : 오른쪽 문자 지워라
+SELECT RTRIM('MILLLER','ER') FROM DUAL;
+SELECT LTRIM('MILLLER','MIL') FROM DUAL;
+SELECT LTRIM('MILLLLLLLLLLLLER','MIL') FROM DUAL;
+
+SELECT '>'||RTRIM('MILLER    ')||'<' FROM DUAL;
+
+-- 치환함수(REPLACE)
+SELECT REPLACE('MILLER', 'LL','OO') FROM DUAL;
+
+-- 숫자함수
+--ROUND(반올림함수)
+--TRUNC(절삭함수)
+--나머지 구하는 함수 (MOD())
+
+SELECT ROUND(12.345,0) AS "R" FROM DUAL;  -- 12
+SELECT ROUND(12.645,0) AS "R" FROM DUAL;  -- 13
+SELECT ROUND(12.345,1) AS "R" FROM DUAL;  -- 12.3
+SELECT ROUND(12.345,-1) AS "R" FROM DUAL;  -- 10
+SELECT ROUND(15.345,-1) AS "R" FROM DUAL;  -- 20
+
+SELECT TRUNC(12.345,0) AS "R" FROM DUAL;  -- 12
+SELECT TRUNC(12.777,0) AS "R" FROM DUAL;  -- 12
+SELECT TRUNC(12.345,1) AS "R" FROM DUAL;  -- 12.3
+SELECT TRUNC(12.345,-1) AS "R" FROM DUAL;  -- 10
+SELECT TRUNC(15.345,-1) AS "R" FROM DUAL;  -- 10
+---------------------------------------------------------
+SELECT ROUND(12.78965462452432342) FROM DUAL;
+SELECT TRUNC(12.78965462452432342) FROM DUAL;
+
+-- 나머지
+SELECT MOD(10,3) FROM DUAL;
+SELECT MOD(0,0) FROM DUAL;
+
+-------------------------------------------------------
+-- 날짜함수
+SELECT SYSDATE FROM DUAL;
+
+SELECT * FROM SYS.NLS_SESSION_PARAMETERS;
+
+SELECT SYSDATE + 5 FROM DUAL;
+SELECT SYSDATE - 5 FROM DUAL;
+SELECT SYSDATE - TO_DATE('20190122','YYMMDD') FROM DUAL;
+
+SELECT MONTHS_BETWEEN('2018-02-27', '2010-02-27') FROM DUAL;
+
+SELECT ROUND(MONTHS_BETWEEN(SYSDATE, '2010-01-01'),1) FROM DUAL;
+
+SELECT TRUNC(MONTHS_BETWEEN(SYSDATE, '2010-01-01'),1) FROM DUAL;
+
+SELECT TO_DATE('2019-03-20','YYYY-MM-DD')+100 FROM DUAL;
+SELECT SYSDATE + 1000 FROM DUAL;
+
+-- QUIZ
+--1. 사원테이블에서 사원들의 입사일에서 현재날짜까지의 근속월수를 구하세요
+-- 단, 근속월수는 정수부분만 출력하세요
+SELECT TRUNC(MONTHS_BETWEEN(SYSDATE,HIREDATE)) as "근속월수" FROM EMP;
+
+--2. 한달이 31일 이라는 기준에서 근속월수를 구하세요
+SELECT TRUNC((SYSDATE-HIREDATE)/31) AS "근속월수" FROM EMP;
+
+
+-----------------------------------------------------------------
+--[변환함수] Today's POINT
+-- Oracle : 문자, 숫자, 날짜
+-- TO_CHAR() : 숫자 -> 문자
+  SELECT TO_CHAR(1235) FROM DUAL;
+
+-- TO_NUMBER() : 문자 -> 숫자
+  SELECT TO_NUMBER('1235') FROM DUAL;
+  SELECT '100' + 100 FROM DUAL;
+  SELECT TO_NUMBER('100')+100 FROM DUAL;
+  
+-- TO_DATE()
+  
+  /*
+  오라클 기본 데이터 타입
+  CREATE TABLE 테이블명(컬러명 타입)
+  CREATE TABLE MEMBER(AGE NUMBER) >> 1건 INSERT.. 1000건
+  
+  JAVA : CLASS PERSON >> PERSON P=NEW PERSON(); 1건
+        List<PERSON> personList =new ArrayList();
+        personlist.add(new person);
+  ORACLE : CREATE PERSON >>  INSERT TNTO PERSON VALUES ();
+  
+  문자 타입
+  -- CHAR(20) : 20 BYTE >> 한글10자, 영문자 20자 : 고정길이 문자열
+  -- VARCHAR2(20) : 20 BYTE >>  한글 10자, 영문자 20자 : 가변길이 문자열
+  
+  CHAR(20) >> '홍길동' >> 6BYTE >> '홍길동              ' >> 20BYTE에 저장
+  VARCHAR(20) >> '홍길동' >> 6BYTE >> '홍길동' >> 6BYTE에 저장
+  
+  고정길이 데이터:  남, 여 >> CHAR(2)
+  성능상 CHAR가 VARCHAR2보다 검색에서 우선순위임
+  
+  결국 문제는 한글
+  UNICODE (2BYTE) : 한글, 영문자, 특수문자, 공백 모두 2BYTE로 통일
+  
+  NCHAR(20) : UNICODE 20글자
+  NVARCHAR2(30) : UNICODE 30글자
+  
+  */
+  
+  -- 1. TO_NUMBER : 문자를 숫자로
+  SELECT '1'+1 FROM DUAL;
+  
+  SELECT TO_NUMBER('1')+1 FROM DUAL;
+  
+  -- 2. TO_CHAR : 숫자를 형식문자로, 날짜를 형식문자로
+  SELECT SYSDATE, TO_CHAR(SYSDATE, 'YYYY')||'년' FROM DUAL;
+  
+  SELECT TO_CHAR(SYSDATE, 'YEAR'), 
+   TO_CHAR(SYSDATE, 'MM'),
+  TO_CHAR(SYSDATE, 'DAY'),
+  TO_CHAR(SYSDATE, 'DY')
+  FROM DUAL;
+  
+  SELECT TO_CHAR(SYSDATE, 'YYYY MM DD') FROM DUAL;
+  SELECT TO_CHAR(SYSDATE, 'YYYY"년"MM"월"DD"일"') FROM DUAL;
+  
+  SELECT EMPNO, ENAME, HIREDATE, 
+         TO_CHAR(HIREDATE,'YYYY') as "입사년도",
+         TO_CHAR(HIREDATE,'MM') as "입사월"
+  FROM EMP
+  WHERE TO_CHAR(HIREDATE,'MM')='12';
+  
+  SELECT TO_CHAR(133354, '999,999') FROM DUAL;
+  SELECT '>'||TO_CHAR(12345,'0999999')||'<' FROM DUAL;  
+  SELECT '>'||TO_CHAR(12345,'0999,999')||'<' FROM DUAL;  
+  SELECT '>'||TO_CHAR(12345,'0999,999.9')||'<' FROM DUAL; 
+  SELECT '>'||TO_CHAR(12345,'$999,999')||'<' FROM DUAL;  
+  
+  ------------------------------------------------------------
+  /*
+사원테이블(employees)에서 사원의 이름은 last_name , first_name 합쳐서 fullname 별칭 부여해서 출력하고
+입사일은  YYYY-MM-DD 형식으로 출력하고 연봉(급여 *12)을 구하고 연봉의 10%(연봉 * 1.1)인상한 값을 
+출력하고 그 결과는 1000단위 콤마 처리해서 출력하세요
+단 2005년 이후 입사자들만 출력하세요 그리고 연봉이 높은 순으로  출력하세요
+*/
+  
+  
+  SELECT LAST_NAME||' '||FIRST_NAME AS FULLNAME,
+  TO_CHAR(HIRE_DATE, 'YYYY-MM-DD') AS HIRE_DATE, TO_CHAR(SALARY*12,'$999,999') AS "연봉", TO_CHAR((SALARY*12)*1.1,'$999,999') AS "인상안"
+  FROM HR.EMPLOYEES
+  WHERE TO_CHAR(HIRE_DATE,'YYYY') > '2005'
+  ORDER BY "연봉" DESC;  -- ORDER BY절에 별칭이 올 수 있다. (ORDER BY는 가장 마지막에 실행)
+  
+  --------------------------------------------------------------------------------
+  
+  -- 일반함수
+  -- NVL
+  -- DECODE : JAVA IF문
+  -- CASE : JAVA CASE문
+  
+  SELECT COMM, NVL(COMM, 0) FROM EMP;
+  
+  CREATE TABLE T_EMP(
+   ID NUMBER(6),
+   JOB VARCHAR2(20)
+  );
+  
+  SELECT * FROM T_EMP;
+  
+  INSERT INTO T_EMP (ID, JOB) VALUES(100, 'IT');
+  INSERT INTO T_EMP (ID, JOB) VALUES(200, 'SALES');
+  INSERT INTO T_EMP (ID, JOB) VALUES(300, 'MGR');
+  INSERT INTO T_EMP (ID) VALUES(400);
+  INSERT INTO T_EMP (ID, JOB) VALUES(500, 'MGR');
+  COMMIT; 
+  
+  SELECT * FROM T_EMP;
+  
+  -- 1. NVL
+  SELECT ID, JOB, NVL(JOB, 'EMPTY...') FROM T_EMP;
+  
+  -- 2. NVL2 >>  NULL이 아닌 경우, NULL인 경우
+  SELECT ID, JOB, NVL2(JOB, JOB||'입니다', 'EMPTY') FROM T_EMP;
+  
+  SELECT ID, JOB, NVL2(JOB, 'AAA', 'BBB') FROM T_EMP;
+  
+  -- 3 DECODE : POINT (통계데이터 : IF, SWITCH)
+  SELECT ID, DECODE(ID,  100, 'IT', 200, 'SALES', 300, 'MGR', 'ETC') FROM T_EMP;
+  
+  SELECT JOB, DECODE(JOB, 'IT',1) FROM T_EMP;
+  
+  SELECT COUNT(DECODE(JOB,'IT',1)) as "IT",
+  COUNT(DECODE(JOB,'SALES',1)) as "SALES",
+  COUNT(DECODE(JOB,'MGR',1)) as "MGR"
+  FROM T_EMP;
+  
+  
+  SELECT JOB, COUNT(JOB) FROM T_EMP
+  GROUP BY JOB;
+  
+  /*
+  EMP테이블에서 부서번호가 10이면 "인사부", 20이면 "관리부", 30이면 "회계부", 나머지는 "기타부서"
+  */
+ SELECT DECODE(DEPTNO,10,'인사부', 20, '관리부', 30, '회계부', '기타부서') FROM EMP;
+ 
+ SELECT CASE WHEN DEPTNO =10 THEN '인사부'
+             WHEN DEPTNO =20 THEN '관리부'
+             WHEN DEPTNO =30 THEN '회계부'
+             ELSE '기타부서'
+        END as "부서"
+  FROM EMP;
+  
+  -- QUIZ
+  CREATE TABLE T_EMP2(
+    ID NUMBER(2),
+    JUMIN CHAR(7)
+  );
+  
+  INSERT INTO T_EMP2 (ID, JUMIN) VALUES(1, '1234567');
+  INSERT INTO T_EMP2 (ID, JUMIN) VALUES(2, '2234567');
+  INSERT INTO T_EMP2 (ID, JUMIN) VALUES(3, '3234567');
+  INSERT INTO T_EMP2 (ID, JUMIN) VALUES(4, '4234567');
+  INSERT INTO T_EMP2 (ID, JUMIN) VALUES(5, '5234567');
+  COMMIT;
+  
+  SELECT * FROM T_EMP2;
+  
+  SELECT ID, DECODE(SUBSTR(JUMIN,1,1), '1', '남성', '2', '여성', '기타') AS "성별"
+  FROM T_EMP2;
+  
+  
+  /*
+  부서번호가 20번인 사원중에서 SMITH라는 이름을 가진 사원이라면 HELLO문자 출력하고
+  부서번호가 20번인 사원중에서 SMITH라는 이름을 가진 사원이 아니라면 WORLD문자 출력하고
+  부서번호가 20번인 사원이 아니라면 ETC문자 출력  
+  */
+  
+  SELECT DECODE(ENAME, 'SMITH', 'HELLO', 'WORLD')   FROM EMP WHERE DEPTNO='20'
+  UNION ALL
+  SELECT 'ETC'   FROM EMP WHERE DEPTNO  != '20';
+  
+  SELECT DECODE(DEPTNO, 20, DECODE(ENAME,'SMITH', 'HELLO', 'WORLD'),'ETC')FROM EMP;
+  
+  -- CASE문
+  /*
+    CASE 조건시 WHEN 결과1 THEN 출력1
+              WHEN 결과2 THEN 출력2
+              WHEN 결과3 THEN 출력3
+              END '컬럼명'
+  */
+  CREATE TABLE T_ZIP(
+    ZIPCODE NUMBER(10)
+  );
+  
+  INSERT INTO T_ZIP(ZIPCODE) VALUES(2);
+  INSERT INTO T_ZIP(ZIPCODE) VALUES(31);
+  INSERT INTO T_ZIP(ZIPCODE) VALUES(32);
+  INSERT INTO T_ZIP(ZIPCODE) VALUES(33);
+  INSERT INTO T_ZIP(ZIPCODE) VALUES(41);
+  COMMIT;  
+  
+  SELECT CASE ZIPCODE WHEN 2 THEN '서울'
+                      WHEN 31 THEN '경기'
+                      WHEN 32 THEN '강원'
+                      WHEN 41 THEN '제주'
+                      ELSE '기타지역'
+         END "REGIONNAME"
+   FROM T_ZIP;
+   
+   /*
+   사원테이블에서 사원급여가 1000달러 이하이면 '4급'
+   1001달러 2000이하면 '3급'
+   2001달러 3000이하면 '2급'
+   3001달러 4000이하면 '1급'
+   4001달러 이상이면 '특급'이라는 데이터를 출력
+   */
+   SELECT CASE WHEN SAL<=1000 THEN '4급'
+               WHEN SAL<=2000 THEN '3급'
+               WHEN SAL<=3000 THEN '2급'
+               WHEN SAL<=4000 THEN '1급'
+               WHEN SAL>=4001 THEN '특급'
+          END AS "회원등급"
+   FROM EMP;
+   
+   SELECT CASE WHEN SAL<=1000 THEN '4급'
+               WHEN SAL BETWEEN 1011 AND 2000 THEN '3급'
+               WHEN SAL BETWEEN 2001 AND 3000 THEN '2급'
+               WHEN SAL BETWEEN 3001 AND 4000 THEN '1급'
+               WHEN SAL>=4001 THEN '특급'
+          END AS "회원등급"
+   FROM EMP;
+   
+   SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER='HR';
+   
+   -----------------------------------------------------------------
+   -- 오라클 PDF 75PAGE
+   -- 집계함수
+   -- 1. COUNT(*) : ROW수, COUNT(컬럼명) 데이터건수(NULL을 포함하지 않음)
+   -- 2. SUM()
+   -- 3. AVG()
+   -- 4. MAX()
+   -- 5. MIN()
+   
+   /*
+   1. 집계함수는 대부분 GROUP BY절과 같이 사용
+   2. 모든 집계함수는 NULL값을 무시
+   3. SELECT 절에 집계함수 이외에 다른 컬럼이 오면 반드시 그 컬럼은 GROUP BY 절에 명시되어야 한다
+   */
+ 
+  SELECT COUNT(*) FROM EMP;  
+  SELECT COUNT(COMM) FROM EMP;  -- NULL은 제외
+  SELECT COUNT(NVL(COMM,'1')) FROM EMP;
+  
+  SELECT SUM(SAL) FROM EMP; --29025
+  SELECT ROUND(AVG(SAL)) FROM EMP; --2073
+  SELECT MAX(SAL) FROM EMP;
+  SELECT MIN(SAL) FROM EMP;
+  -- POINT 집계함수 결과는 1개row
+  
+  SELECT EMPNO, COUNT(EMPNO) FROM EMP;  ---(X) EMPNO는 14건, 집계는 1건
+  SELECT SUM(SAL), AVG(SAL), MAX(SAL), MIN(SAL), COUNT(SAL), COUNT(*) FROM EMP;
+  
+  
+  -- 사장님이 회사 총수당이 얼마나 지급되지?  (수당의 평균)
+  SELECT TRUNC(AVG(COMM),0) FROM EMP;  -- 721
+  SELECT TRUNC(AVG(NVL(COMM,0)),0) FROM EMP;  --309
+  SELECT TRUNC(SUM(COMM)/COUNT(*)) FROM EMP;  -- 309
+  
+  SELECT JOB, SUM(SAL) FROM EMP GROUP BY JOB;
+  SELECT JOB, AVG(SAL) FROM EMP GROUP BY JOB;
+  
+  SELECT DEPTNO,SUM(SAL) FROM EMP GROUP BY DEPTNO;
+  SELECT DEPTNO,AVG(SAL) FROM EMP GROUP BY DEPTNO;
+  
+  -- 부서별 평균급여를 구하세요
+  SELECT DEPTNO, ROUND(AVG(SAL)) AS AVG
+  FROM EMP
+  GROUP BY DEPTNO;
+  
+  -- 직종별 평균급여를 구하세요
+  SELECT JOB, ROUND(AVG(SAL)) AS AVG
+  FROM EMP
+  GROUP BY JOB;
+  
+  -- 직종별 평균급여, 급여합, 최대급여, 최소급여, 건수를 출력하세요
+  SELECT AVG(SAL), SUM(SAL), MAX(SAL), MIN(SAL), COUNT(SAL)
+  FROM EMP
+  GROUP BY JOB;
+  
+  -- 부서별, 직종별 급여의 합을 구하세요
+  SELECT DEPTNO, JOB, SUM(SAL)
+  FROM EMP
+  GROUP BY DEPTNO, JOB;
+  
+  /*
+  SELECT     4
+  FROM       1
+  WHERE      2
+  GROUP BY   3
+  ORDER BY   5
+  */
+  
+  /*
+  직종별 평균급여가 3000달러 이상인 사원의 직종과 평균급여를 출력하세요
+  
+  */
+  SELECT JOB, AVG_SAL
+  FROM (
+  SELECT JOB, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY JOB
+  ) WHERE AVG_SAL>3000;
+  
+  
+  SELECT JOB, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY JOB
+  HAVING AVG(SAL) >3000;  -- HAVING이 SELECT보다 먼저이므로 SELECT의 ALIAS를 쓸 수 없다.
+ 
+ 
+ /* 
+  CREATE VIEW TTT AS
+  SELECT JOB, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY JOB;
+  
+ DROP VIEW TTT;
+ */
+ 
+ /*
+ SELECT      5
+ FROM        1
+ WHERE       2
+ GROUP BY    3
+ HAVING      4
+ ORDER BY    6
+ */
+ 
+ /*
+ 1. 사원테이블에서 직종별 급여합을 출력하되 수당은 지급받고 급여의 합이 5000이상인 사원들의 목록을 출력하세요
+ --급여의 합이 낮은 순으로 출력하세요
+ */
+ SELECT *
+ FROM EMP
+ WHERE JOB IN (
+ SELECT JOB
+ FROM EMP
+ WHERE COMM IS NOT NULL
+ GROUP BY JOB
+ HAVING SUM(SAL) >= 5000
+ )ORDER BY SAL;
+ 
+SELECT JOB, SUM(SAL)
+ FROM EMP
+ WHERE COMM IS NOT NULL
+ GROUP BY JOB
+ HAVING SUM(SAL) >= 5000
+ ORDER BY SUM(SAL) ASC;
+ 
+
+
+ 
+ /*
+ 2. 사원테이블에서 부서인원이 4명보다 많은 부서의 부서번호, 인원수, 급여의 합을 출력하세요
+ */
+ SELECT DEPTNO, COUNT(DEPTNO), SUM(SAL)
+ FROM EMP
+ WHERE DEPTNO IN (
+ SELECT DEPTNO 
+ FROM EMP
+ GROUP BY DEPTNO
+ HAVING COUNT(DEPTNO)>4
+ )GROUP BY DEPTNO;
+ 
+ SELECT DEPTNO, COUNT(DEPTNO), SUM(SAL)
+ FROM EMP
+ GROUP BY DEPTNO
+ HAVING COUNT(DEPTNO)>4;
+ /*
+ 3. 사원테이블에서 직종별 급여의 합이 5000을 초과하는 직종과 급여의 합을 출력하세요
+ 단 판매직종(SALESMAN)은 제외하고 급여합으로 내림차순 정렬하세요
+ */
+ SELECT JOB, SUM(SAL)
+ FROM EMP
+ WHERE JOB !='SALESMAN'
+ GROUP BY JOB
+ HAVING SUM(SAL)>5000
+ ORDER BY SUM(SAL) DESC;
+ 
+ 
