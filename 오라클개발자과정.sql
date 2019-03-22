@@ -969,3 +969,713 @@ SELECT JOB, SUM(SAL)
  ORDER BY SUM(SAL) DESC;
  
  
+ --1. empno 와 ename 결합하여 출력하시오.
+ SELECT EMPNO||ENAME
+ FROM EMP;
+ 
+ -- 2. 이름이 SMITH 이고 직업이 CLERK 인 사원의 사원번호, 이름, 직업, 급여를 출력하시오.
+ 
+ SELECT EMPNO, ENAME, JOB, SAL 
+ FROM EMP
+ WHERE ENAME='SMITH' AND JOB='CLERK';
+ 
+-- 3. 사원번호가 10 이상이고 급여가 2000 이상인 사람의 모든 정보를 출력하시오.
+
+ SELECT *
+ FROM EMP
+ WHERE EMPNO>10 AND SAL >2000;
+
+-- 4. 수당이 null 인 모든 사람의 정보를 출력하시오.
+ SELECT *
+ FROM EMP
+ WHERE COMM IS NULL;
+
+-- 5. 사번, 이름, 급여, 수당, 총급여를 출력하시오.
+ SELECT EMPNO, ENAME, SAL, COMM, SAL + NVL(COMM,0) as TOTAL_INCOME
+ FROM EMP;
+ 
+
+-- 6. 이름에서 A로 시작하는 사원의 사번,이름, 급여, 수당 을 출력하시오.
+-- 단, 수당이 null이라면 'empty' 로 출력하시오.
+ SELECT EMPNO, ENAME, SAL, NVL(COMM,0)
+ FROM EMP
+ WHERE ENAME LIKE 'A%';
+ 
+ 
+ 
+-- * HR 계정으로 하세요
+--* 1. 부서 번호(department_id)가 50인 사원들의 이메일 아이디를 불러와 아이디를 소문자로 바꾸고 아이디@oracle.com 형식으로 출력하세요.
+ SELECT LOWER(EMAIL)||'@oracle.com' AS email
+ FROM HR.EMPLOYEES
+ WHERE DEPARTMENT_ID=50;
+
+--* 출력 : abull@oracle.com
+
+--* 2. 모든 사원의 전화번호를 불러와 앞의 3개 숫자를 010으로 바꾸고 '.'을 '-'로 바꿔서 출력하세요
+--* - ex) 515.123.4567 >> 010-123-4567
+ SELECT '010-'||SUBSTR(REPLACE(PHONE_NUMBER,'.','-'),5) AS PHONENUMBER
+ FROM HR.EMPLOYEES
+ ;
+
+--* 3. 부서 번호 별로 급여(salary)의 총합이 얼마인지 출력하되 사원 번호(employee_id)가 100번부터 150번까지인 사람만 계산해서 출력하세요
+  SELECT DEPARTMENT_ID, SUM(SALARY) AS TOTAL_SAL
+  FROM HR.EMPLOYEES
+  WHERE EMPLOYEE_ID BETWEEN 100 AND 150
+  GROUP BY DEPARTMENT_ID;
+
+--* 4. 입사 연도별로 입사등급을 나눠 출력하고 사원의 이름(first_name)과 성(last_name)을 중간에 공백을 넣어 같이 출력하세요
+--* - 2002년 입사 >> 원로
+--* - 2005년 입사 >> 청년
+--* - 2007년 입사 >> 꼬꼬마
+--* - 그외 >> 외계인
+  SELECT  CASE WHEN TO_CHAR(HIRE_DATE,'YYYY')<=2002 THEN '원로'
+               WHEN TO_CHAR(HIRE_DATE,'YYYY')<=2005 THEN '청년'
+               WHEN TO_CHAR(HIRE_DATE,'YYYY')<=2007 THEN '꼬꼬마'
+               ELSE '외계인'
+          END as GRADE,
+          FIRST_NAME||' '||LAST_NAME as FULLNAME
+  FROM HR.EMPLOYEES;
+--* 출력 : Steven King 외계인
+
+ SELECT TO_CHAR(TO_DATE('20190310','YYYYMMDD'),'DAY') FROM DUAL;
+ SELECT TO_CHAR(TO_DATE('20190310','YYYYMMDD'),'D') FROM DUAL;
+ 
+ -----------------------------------------------------------------------------
+ -- 오라클.pdf (85p)
+ -- [JOIN] 다중테이블로부터 데이터 검색
+ 
+ 
+ --조인 실습 테이블 구성하기--
+--create table M (M1 char(6) , M2 char(10));
+--create table S (S1 char(6) , S2 char(10));
+--create table X (X1 char(6) , X2 char(10));
+--
+--insert into M values('A','1');
+--insert into M values('B','1');
+--insert into M values('C','3');
+--insert into M values(null,'3');
+--commit;
+--
+--insert into S values('A','X');
+--insert into S values('B','Y');
+--insert into S values(null,'Z');
+--commit;
+--
+--insert into X values('A','DATA');
+--commit;
+
+select * from m;
+select * from s;
+select * from x;
+
+
+-- 종류
+-- 등가조인 (EQUI JOIN) 70%
+-- 원테이블과 대응되는 테이블에 있는 컬럼의 데이터를 1:1 매핑
+-- SQL JOIN 문법
+-- ANSI 문법(권장) [INNER] JOIN ON 
+
+-- SQL JOIN
+-- WHERE를 JOIN의 조건절로 사용 (어떤 것이 JOIN조건이고 어떤 것이 FROM의 조건절인지 혼동)
+SELECT * 
+FROM M, S
+WHERE M.M1 = S.S1;
+
+-- ANSI 문법
+SELECT *
+FROM M INNER JOIN S
+ON M.M1=S.S1;
+
+SELECT *
+FROM M JOIN S -- INNER 생략가능
+ON M.M1=S.S1;
+
+SELECT *
+FROM M INNER JOIN X
+ON M.M1=X.X1;
+
+-- 사원번호, 사원이름, 사원부서번호, 사원부서명을 알고 싶어요
+SELECT A.EMPNO, A.ENAME, B.DEPTNO, B.DNAME
+FROM EMP A INNER JOIN DEPT B
+ON A.DEPTNO = A.DEPTNO;
+
+SELECT *
+FROM M, S, X
+WHERE M.M1=S.S1
+AND M.M1=X.X1;
+
+-- ANSI JOIN
+
+SELECT *
+FROM M INNER JOIN S ON M.M1=S.S1
+       INNER JOIN X ON M.M1=X.X1;
+
+-- [HR계정]
+SELECT * FROM HR.EMPLOYEES;
+SELECT * FROM HR.DEPARTMENTS;
+SELECT * FROM HR.LOCATIONS;
+
+-- 1.사번, 이름(LAST NAME), 부서번호, 부서이름을 출력하세요 -- 106명
+SELECT E.EMPLOYEE_ID, E.LAST_NAME, E.DEPARTMENT_ID, D.DEPARTMENT_NAME 
+FROM HR.EMPLOYEES E JOIN HR.DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID;
+
+-- 문제점
+SELECT COUNT(*) FROM HR.EMPLOYEES; -- 107명
+
+-- 등가조인으로 해결불가 -- OUTER JOIN으로 해결
+SELECT E.EMPLOYEE_ID, E.LAST_NAME, E.DEPARTMENT_ID, D.DEPARTMENT_NAME 
+FROM HR.EMPLOYEES E LEFT JOIN HR.DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID;
+
+-- 2. 사번, 이름(LAST NAME), 부서번호, 부서명, 지역코드, 도시명 출력하세요
+
+SELECT E.EMPLOYEE_ID, E.LAST_NAME, D.DEPARTMENT_ID, D.DEPARTMENT_NAME, L.LOCATION_ID, L.CITY
+FROM HR.EMPLOYEES E JOIN HR.DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID
+                    JOIN HR.LOCATIONS L ON D.LOCATION_ID=L.LOCATION_ID;
+
+SELECT E.EMPLOYEE_ID, E.LAST_NAME, D.DEPARTMENT_ID, D.DEPARTMENT_NAME, L.LOCATION_ID, L.CITY
+FROM HR.EMPLOYEES E LEFT JOIN HR.DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID
+                    LEFT JOIN HR.LOCATIONS L ON D.LOCATION_ID=L.LOCATION_ID;
+                    
+
+--[BITUSER전환]
+-- 2. 비등가조인(NON-EQUI JOIN) : 의미만 존재 
+-- 원테이블과 대응되는 테이블에 있는 컬럼이 1:1매핑이 되지 않는 경우
+
+SELECT * FROM EMP;
+SELECT * FROM SALGRADE;
+
+
+SELECT *
+FROM EMP E JOIN SALGRADE S
+ON E.SAL BETWEEN S.LOSAL AND S.HISAL;
+
+------------------------------------------------------------
+-- 3. OUTER JOIN (EQUI JOIN + NULL)
+-- OUTER JOIN <주종관계의 파악> >> 주가 되는 테이블의 데이터를 가져오는 방법
+-- 문법 ) LEFT OUTER JOIN (왼쪽이 주)
+--       RIGHT OUTER JOIN (오른쪽이 주)
+--       FULL OUTER JOIN (LEFT, RIGHT JOIN을 UNION         
+
+-- SQL LEFT JOIN
+SELECT * 
+FROM M, S
+WHERE M.M1 = S.S1(+);
+
+-- ANSI LEFT JOIN 
+SELECT *
+FROM M LEFT JOIN S
+ON M.M1=S.S1;
+ 
+-- SQL RIGHT JOIN  
+SELECT * 
+FROM M, S
+WHERE  M.M1 (+) = S.S1;
+
+-- ANSI RIGHT JOIN 
+SELECT *
+FROM M RIGHT JOIN S
+ON M.M1 = S.S1;
+
+-- ANSI FULL OUTER JOIN : LEFT JOIN, RIGHT JOIN을 UNION
+SELECT *
+FROM M FULL OUTER JOIN S
+ON M.M1=S.S1;
+
+
+-- HR 계정으로 이동
+
+SELECT * FROM HR.EMPLOYEES WHERE DEPARTMENT_ID IS NULL;
+
+-- OUTER JOIN
+SELECT E.EMPLOYEE_ID, E.LAST_NAME, E.DEPARTMENT_ID, D.DEPARTMENT_NAME 
+FROM HR.EMPLOYEES E LEFT OUTER JOIN HR.DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID;
+
+-------------------------------------------------------------------------------------
+-- SELF JOIN (자기참조)
+-- 하나의 테이블에서 특정컬럼이 다른 컬럼을 참조하는 경우
+
+SELECT A.EMPNO, A.ENAME, A.MGR, B.ENAME 
+FROM EMP A LEFT JOIN EMP B
+ON A.MGR=B.EMPNO;
+
+SELECT * FROM EMP WHERE MGR IS NULL;
+
+-- 1. 사원들의 이름, 부서번호, 부서이름을 출력하라.
+SELECT E.ENAME, E.DEPTNO, D.DNAME
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO;
+ 
+SELECT COUNT(*) FROM EMP;
+ 
+-- 2. DALLAS에서 근무하는 사원의 이름, 직위, 부서번호, 부서이름을
+-- 출력하라.
+SELECT E.ENAME, E.JOB, E.DEPTNO, D.DNAME
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO
+WHERE D.LOC='DALLAS';
+
+ 
+-- 3. 이름에 'A'가 들어가는 사원들의 이름과 부서이름을 출력하라.
+
+SELECT E.ENAME, D.DNAME
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO
+WHERE E.ENAME LIKE '%A%';
+
+
+-- 4. 사원이름과 그 사원이 속한 부서의 부서명, 그리고 월급을
+--출력하는데 월급이 3000이상인 사원을 출력하라.
+
+SELECT E.ENAME, D.DNAME, E.SAL
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO
+WHERE E.SAL >= 3000;
+ 
+ 
+-- 5. 직위(직종)가 'SALESMAN'인 사원들의 직위와 그 사원이름, 그리고
+-- 그 사원이 속한 부서 이름을 출력하라.
+
+SELECT E.JOB, E.ENAME, D.DNAME
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO
+WHERE E.JOB='SALESMAN';
+
+ 
+-- 6. 커미션이 책정된 사원들의 사원번호, 이름, 연봉, 연봉+커미션,
+-- 급여등급을 출력하되, 각각의 컬럼명을 '사원번호', '사원이름',
+-- '연봉','실급여', '급여등급'으로 하여 출력하라.
+--(비등가 ) 1 : 1 매핑 대는 컬럼이 없다
+
+SELECT E.EMPNO AS "사원번호", E.ENAME AS "사원이름", E.SAL*12 AS "연봉", E.SAL*12+E.COMM AS "실급여", S.GRADE AS "급여등급"
+FROM EMP E JOIN SALGRADE S
+ON E.SAL BETWEEN S.LOSAL AND S.HISAL
+WHERE E.COMM IS NOT NULL;
+SELECT * FROM SALGRADE;
+
+-- 7. 부서번호가 10번인 사원들의 부서번호, 부서이름, 사원이름,
+-- 월급, 급여등급을 출력하라.
+
+SELECT D.DEPTNO, D.DNAME, E.ENAME, E.SAL, S.GRADE
+FROM EMP E JOIN DEPT D ON E.DEPTNO = D.DEPTNO
+           JOIN SALGRADE S ON E.SAL BETWEEN S.LOSAL AND S.HISAL
+WHERE D.DEPTNO='10';
+
+ 
+-- 8. 부서번호가 10번, 20번인 사원들의 부서번호, 부서이름,
+-- 사원이름, 월급, 급여등급을 출력하라. 그리고 그 출력된
+-- 결과물을 부서번호가 낮은 순으로, 월급이 높은 순으로
+-- 정렬하라.
+
+
+SELECT D.DEPTNO, D.DNAME, E.ENAME, E.SAL, S.GRADE
+FROM EMP E JOIN DEPT D ON E.DEPTNO = D.DEPTNO
+           JOIN SALGRADE S ON E.SAL BETWEEN S.LOSAL AND S.HISAL
+WHERE D.DEPTNO IN ('10','20')
+ORDER BY E.DEPTNO ASC, E.SAL DESC;
+
+ 
+ 
+-- 9. 사원번호와 사원이름, 그리고 그 사원을 관리하는 관리자의
+-- 사원번호와 사원이름을 출력하되 각각의 컬럼명을 '사원번호',
+-- '사원이름', '관리자번호', '관리자이름'으로 하여 출력하라.
+--SELF JOIN (자기 자신테이블의 컬럼을 참조 하는 경우)
+
+SELECT E.EMPNO AS "사원번호", E.ENAME AS "사원이름", D.EMPNO AS "관리자번호", D.ENAME AS "관리자이름"
+FROM EMP E LEFT JOIN EMP D
+ON E.MGR = D.EMPNO
+;
+
+
+-------------------------------------------------------------------------------
+--[SUBQEURY] 오라클.PDF (100 PAGE)
+-- SQL의 꽃이다. SQL의 만능 해결사
+
+SELECT EMPNO, ENAME, SAL
+FROM EMP
+WHERE SAL >(
+  SELECT AVG(SAL)
+  FROM EMP
+);
+
+
+-- SUBQUERY
+-- 1. SINGLE ROW SUBQUERY : SUBQUERY의 결과가 1개의 ROW(단일값)을 가질 때
+-- 2. MULTI ROW SUBQUERY : SUBQUERY의 결과가 1개 이상의 ROW를 가질 때
+-- 구분이유 : 사용되는 연산자의 차이
+-- MULTI ROW (IN, NOT IN, ANY, ALL)
+
+-- 정의 (SUBQUERY)
+-- 1.괄호안에 있어야 한다. (SELECT AVG(SAL) FROM EMP)
+-- 2.단일컬럼으로 구성 >> (SELECT SAL, DEPTNO FROM EMP ) (X) 단일 컬럼이 아니다.
+-- 3.단독으로 실행 가능해야 한다.
+
+-- 실행순서
+-- 1. SUBQUERY 먼저 실행
+-- 2. SUBQUERY의 결과를 가지고 MAIN QUERY실행
+
+-- 사원 테이블에서 JONES의 급여보다 더 많은 급여를 받는 사원의 사번, 이름, 급여
+  SELECT EMPNO, ENAME, SAL
+  FROM EMP 
+  WHERE SAL > (
+  SELECT SAL FROM EMP WHERE ENAME='JONES'
+  );
+
+-- 급여가 2000 이상
+SELECT *
+FROM EMP
+WHERE SAL IN (
+SELECT SAL FROM EMP WHERE SAL >2000
+);
+
+-- 부하직원이 있는 사원의 사번과 이름을 출력하세요
+
+SELECT *
+FROM EMP WHERE EMPNO IN (SELECT MGR FROM EMP);
+-- EMPNO = 7902 OR EMPNO = 7698 OR EMPNO = 7839 OR EMP IS NULL
+
+-- 부하직원이 없는 사원의 사번과 이름을 출력하세요
+
+SELECT *
+FROM EMP WHERE EMPNO NOT IN (SELECT NVL(MGR,0) FROM EMP);
+-- EMPNO != 7902 AND EMPNO != 7698 AND EMPNO = 7839 AND EMP IS NOT NULL
+-- NOT IN을 사용할 경우 NULL이 영향을 주기 때문에 주의해야 한다.
+
+-- KING에게 보고하는, 즉 직속상관이 KING인 사원
+SELECT EMPNO, ENAME, JOB, MGR
+FROM EMP
+WHERE MGR  IN (
+SELECT EMPNO FROM EMP WHERE ENAME='KING'
+);
+
+-- 20번 부서의 사원중에서 가장 많은 급여를 받는 사원보다 더 많은 급여를 받는 사원의 사번, 이름, 급여, 부서번호
+SELECT EMPNO, ENAME, SAL, DEPTNO
+FROM EMP
+WHERE SAL > (
+SELECT MAX(SAL) FROM EMP WHERE DEPTNO=20
+);
+
+SELECT EMPNO, ENAME, SAL, DEPTNO
+FROM EMP
+WHERE SAL > ALL(
+SELECT SAL FROM EMP WHERE DEPTNO=20
+);
+
+--
+SELECT *
+FROM EMP
+WHERE DEPTNO IN (SELECT DEPTNO FROM EMP WHERE JOB='SALESMAN')
+AND SAL IN (SELECT SAL FROM EMP WHERE JOB='SALEMAN')
+;
+
+--
+-- 부서의 평균월급보다 더 많은 월급을 월급을 받는 사원의 사번, 이름, 부서번호, 부서별 평균월급
+SELECT A.EMPNO, A.ENAME, A.DEPTNO, B.AVG_SAL 
+FROM EMP A JOIN (
+SELECT DEPTNO,AVG(SAL) AS AVG_SAL
+FROM EMP GROUP BY DEPTNO) B
+ON A.DEPTNO=B.DEPTNO
+WHERE A.SAL > B.AVG_SAL;
+
+
+--1. 'SMITH'보다 월급을 많이 받는 사원들의 이름과 월급을 출력하라.
+SELECT *
+FROM EMP
+WHERE SAL =(SELECT SAL FROM EMP WHERE ENAME='SMITH')
+;
+ 
+--2. 10번 부서의 사원들과 같은 월급을 받는 사원들의 이름, 월급,
+-- 부서번호를 출력하라.
+SELECT ENAME, SAL, DEPTNO 
+FROM EMP
+WHERE SAL IN (SELECT SAL FROM EMP WHERE DEPTNO=10);
+ 
+--3. 'BLAKE'와 같은 부서에 있는 사원들의 이름과 고용일을 뽑는데
+-- 'BLAKE'는 빼고 출력하라.
+SELECT ENAME, HIREDATE 
+FROM EMP 
+WHERE DEPTNO =(SELECT DEPTNO FROM EMP WHERE ENAME='BLAKE')
+AND ENAME !='BLAKE';
+
+
+--4. 평균급여보다 많은 급여를 받는 사원들의 사원번호, 이름, 월급을
+-- 출력하되, 월급이 높은 사람 순으로 출력하라.
+SELECT EMPNO, ENAME, SAL
+FROM EMP
+WHERE SAL > (SELECT AVG(SAL) FROM EMP)
+ORDER BY SAL DESC;
+ 
+--5. 이름에 'T'를 포함하고 있는 사원들과 같은 부서에서 근무하고
+-- 있는 사원의 사원번호와 이름을 출력하라.
+SELECT EMPNO, ENAME
+FROM EMP
+WHERE DEPTNO IN (
+SELECT DEPTNO FROM EMP WHERE ENAME LIKE '%T%'
+);
+
+
+--6. 30번 부서에 있는 사원들 중에서 가장 많은 월급을 받는 사원보다
+-- 많은 월급을 받는 사원들의 이름, 부서번호, 월급을 출력하라.
+--(단, ALL(and) 또는 ANY(or) 연산자를 사용할 것)
+
+SELECT * FROM EMP
+WHERE SAL > ALL(
+SELECT SAL FROM EMP WHERE DEPTNO=30
+);
+ 
+ 
+--7. 'DALLAS'에서 근무하고 있는 사원과 같은 부서에서 일하는 사원의
+-- 이름, 부서번호, 직업을 출력하라.
+SELECT * FROM EMP
+WHERE DEPTNO = (SELECT DEPTNO FROM DEPT WHERE LOC='DALLAS');
+
+--8. SALES 부서에서 일하는 사원들의 부서번호, 이름, 직업을 출력하라.
+SELECT DEPTNO, ENAME, JOB FROM EMP 
+WHERE DEPTNO =(SELECT DEPTNO FROM DEPT WHERE DNAME='SALES') ;
+ 
+--9. 'KING'에게 보고하는 모든 사원의 이름과 급여를 출력하라
+--king 이 사수인 사람 (mgr 데이터가 king 사번)
+
+SELECT ENAME, SAL 
+FROM EMP
+WHERE MGR =(SELECT EMPNO FROM EMP WHERE ENAME='KING');
+
+ 
+--10. 자신의 급여가 평균 급여보다 많고, 이름에 'S'가 들어가는
+-- 사원과 동일한 부서에서 근무하는 모든 사원의 사원번호, 이름,
+-- 급여를 출력하라.
+
+SELECT EMPNO, ENAME, SAL 
+FROM EMP
+WHERE SAL > (SELECT AVG(SAL) FROM EMP)
+AND DEPTNO IN (SELECT DEPTNO FROM EMP WHERE ENAME LIKE '%S%' );
+ 
+--11. 커미션을 받는 사원과 부서번호, 월급이 같은 사원의
+-- 이름, 월급, 부서번호를 출력하라.
+
+SELECT E.ENAME, E.SAL, E.DEPTNO
+FROM EMP E JOIN (
+SELECT DISTINCT DEPTNO, SAL FROM EMP 
+WHERE COMM IS NOT NULL) B
+ON E.DEPTNO=B.DEPTNO
+WHERE E.SAL = B.SAL
+;
+
+SELECT ENAME, SAL, DEPTNO
+FROM EMP
+WHERE DEPTNO IN(SELECT DEPTNO
+                      FROM EMP
+                      WHERE COMM IS NOT NULL)
+AND SAL IN( SELECT SAL
+               FROM EMP
+               WHERE COMM IS NOT NULL);
+               
+--12. 30번 부서 사원들과 월급과 커미션이 같지 않은
+-- 사원들의 이름, 월급, 커미션을 출력하라.
+
+SELECT * FROM EMP
+WHERE SAL NOT IN (SELECT SAL FROM EMP WHERE DEPTNO=30)
+AND COMM NOT IN (SELECT NVL(COMM,0) FROM EMP WHERE DEPTNO=30);
+
+-------------------------------------------------------------------------------
+--[INSERT], [UPDATE], [DELETE]
+
+/*
+오라클 기분
+DDL (데이터 정의어) : CREATE, ALTER, DROP, TRUNCATE(저장공간까지 삭제), RENAME, MODIFY
+DML (데이터 조작어) : INSERT, UPDATE, DELETE
+DQL (데이터 질의어) : SELECT
+DCL (데이터 제어어) : GRANK, REVOKE
+TCL (트랜잭션 처리) : COMMIT, ROLLBACK, SAVEPOINT
+
+
+*/
+
+-- DML (트랜잭션 : 하나의 논리적인 작업 단위)
+-- A은행에서 출금, B라는 은행 입금 (하나의 논리적인 단위)
+-- A라는 계좌 100 출금 : UPDATE
+-- B라는 계좌 100 입금 : UPDATE
+-- 둘다 성공 : COMMIT
+-- 둘중에 하나라도 실패 : ROLLBACK
+
+-- 테이블 정보 보기
+DESC EMP;
+
+SELECT * FROM TAB; -- 사용자가 만든 계정(스키마) 테이블 목록 출력
+
+SELECT * FROM COL; -- 컬럼정보
+SELECT * FROM COL WHERE TNAME='EMP';
+
+SELECT * FROM USER_TABLES WHERE TABLE_NAME='DEPT';
+
+-----------------------------------------------------------------------------
+-- DML (오라클.PDF P.168)
+
+--INSERT INTO table_name [(column1[, column2, . . . . . ])]
+--VALUES (value1[, value2, . . . . . . ]);
+
+CREATE TABLE TEMP (
+  ID NUMBER PRIMARY KEY , -- ID컬럼에는 NULL값도, 중복도 안됨. 유일한 데이터 1건 보장
+  NAME VARCHAR2(20) -- DEFAULT NULL 허용 
+);  
+
+
+CREATE SEQUENCE SEQ_ID
+MINVALUE 1
+START WITH 1
+INCREMENT BY 1
+CACHE 10;
+
+INSERT INTO TEMP(ID, NAME) VALUES(SEQ_ID.NEXTVAL, '홍길동');
+COMMIT;
+
+-- 2컬럼 목록 생략
+INSERT INTO TEMP VALUES(SEQ_ID.NEXTVAL, '김유신');
+COMMIT;
+SELECT * FROM TEMP;
+
+--1 문제
+-- INSERT INTO TEMP(ID, NAME) VALUES(2,'아무개'); -- SQL 오류: ORA-00001: 무결성 제약 조건(BITUSER.SYS_C0011066)에 위배됩니다
+
+-- INSERT INTO TEMP(NAME) VALUES('아무개'); -- SQL 오류: ORA-01400: NULL을 ("BITUSER"."TEMP"."ID") 안에 삽입할 수 없습니다
+
+------------------------------------------------------------------------------
+-- 일반 SQL은 프로그램적인 요소가 없음
+-- PL-SAL (변수, 제어문)
+
+CREATE TABLE TEMP2(ID VARCHAR2(20));
+
+-- PL-SQL 사용
+/*
+BEGIN
+  FOR i IN 1..1000 LOOP
+    INSERT INTO TEMP2(ID) VALUES('A'||TO_CHAR(i));
+  END LOOP;
+END;
+*/
+SELECT * FROM TEMP2;
+
+------------------------------------------------------------------------------
+
+CREATE TABLE TEMP3 (
+  MEMBERID NUMBER(3) NOT NULL,
+  NAME VARCHAR2(10), -- NULL 허용
+  REGDATE DATE DEFAULT SYSDATE -- DEFAULT로 SYSDATE 값
+);
+
+SELECT SYSDATE FROM DUAL;
+
+INSERT INTO TEMP3(MEMBERID, NAME) VALUES(200, '아무개');
+
+SELECT * FROM TEMP3;
+COMMIT;
+
+INSERT INTO TEMP3(MEMBERID) VALUES(300);
+SELECT * FROM TEMP3;
+COMMIT;
+
+
+------------------------------------------------------------------------------
+-- INSERT (TIP)
+-- 1. 대량 데이터 INSERT하기
+
+CREATE TABLE TEMP4( ID NUMBER);
+CREATE TABLE TEMP5( NUM NUMBER);
+
+INSERT INTO TEMP4(ID) VALUES(1);
+INSERT INTO TEMP4(ID) VALUES(2);
+INSERT INTO TEMP4(ID) VALUES(3);
+INSERT INTO TEMP4(ID) VALUES(4);
+INSERT INTO TEMP4(ID) VALUES(5);
+INSERT INTO TEMP4(ID) VALUES(6);
+INSERT INTO TEMP4(ID) VALUES(7);
+INSERT INTO TEMP4(ID) VALUES(8);
+INSERT INTO TEMP4(ID) VALUES(9);
+INSERT INTO TEMP4(ID) VALUES(10);
+COMMIT;
+
+SELECT * FROM TEMP4;
+
+-- 요구사항 TEMP4에 있는 모든 데이터를 TEMP5에 넣고 싶다.
+-- INSERT INTO 테이블명 (컬럼리스트) VALUES(값리스트)
+-- INSERT INTO 테이블명 SELECT 구문 (단 컬럼의 개수와 타입이 동일)
+
+INSERT INTO TEMP5(NUM)
+SELECT ID
+FROM TEMP4;
+
+SELECT * FROM TEMP5;
+COMMIT;
+
+-- 2. INSERT 
+-- 테이블이 없는 상황에서 [테이블을 생성] + [대량데이터 삽입]
+-- 단, 복사개념(제약정보는 복사가 안됨(PK, FK))
+-- 순수한 구조정보(컬럼이름, 타입)복사
+
+CREATE TABLE COPYEMP
+AS
+SELECT *
+FROM EMP;
+
+
+CREATE TABLE COPYEMP2
+AS
+SELECT *
+FROM EMP
+WHERE DEPTNO=30;
+
+-- 데이터는 복사안하고 구조만 복사하고 싶어요
+CREATE TABLE COPYTEMP3
+AS
+SELECT *
+FROM EMP
+WHERE 1=2;
+
+SELECT * FROM COPYTEMP3;
+
+-- TIP 
+-- 오라클 시스템 테이블 (다양한 정보)
+-- 제약정보(PK, FK)
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='EMP';
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='COPYEMP';
+
+CREATE TABLE PKTEST (ID NUMBER PRIMARY KEY);  -- NOT NULL, UNIQUE
+
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='PKTEST';
+--
+INSERT INTO PKTEST
+SELECT * FROM TEMP4;
+COMMIT;
+
+CREATE TABLE PKTEST2
+AS
+SELECT * FROM PKTEST;
+
+-- 제약조건은 복사가 안됨
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='PKTEST2';
+
+---------------- [INSERT의 종료]-----------------------------------------------
+
+--[UPDATE]
+/*
+UPDATE TABLE_NAME
+SET COLUMN1=VALUE1, COLUMN2=VALUE2
+WHERE 조건
+
+
+UPDATE TABLE_NAME
+SET COLUMN1=(SUBQUERY)
+WHERE 조건
+
+*/
+
+SELECT * FROM COPYEMP;
+
+UPDATE COPYEMP
+SET SAL=0
+WHERE DEPTNO=20;
+
+SELECT * FROM COPYEMP WHERE DEPTNO=20;
+
+COMMIT;
+
+-- UPDATE와 SUBQUERY의 결합이 자주 사용됨
