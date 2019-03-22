@@ -1679,3 +1679,408 @@ SELECT * FROM COPYEMP WHERE DEPTNO=20;
 COMMIT;
 
 -- UPDATE와 SUBQUERY의 결합이 자주 사용됨
+UPDATE COPYEMP
+SET SAL = (SELECT SUM(SAL) FROM EMP);
+
+SELECT * FROM COPYEMP ;
+ROLLBACK;
+
+-- 여러개 컬럼 UPDATE
+UPDATE COPYEMP
+SET ENAME='AAA', JOB='BBB', HIREDATE=SYSDATE, SAL=(SELECT SUM(SAL) FROM EMP)
+WHERE DEPTNO=10;
+
+SELECT * FROM COPYEMP WHERE DEPTNO=10;
+COMMIT;
+
+-------------------------[ UPDATE END ] --------------------------------------
+-- [DELETE]
+-- 원칙적으로 DELETE후  COMMIT하면 복원불가 => 백업데이터가 있다면 복원가능
+
+DELETE FROM COPYEMP;
+
+SELECT * FROM COPYEMP;
+
+ROLLBACK; 
+
+DELETE FROM COPYEMP WHERE DEPTNO IN (10,20);
+
+SELECT * FROM COPYEMP;
+ROLLBACK;
+
+----------------------[ DELETE END ] -----------------------------------------
+
+/*
+ APP(JAVA) -> JDBC API -> DB작업
+
+ CRUD
+ 
+ CREATE : INSERT
+ READ : SELECT
+ UPDATE : UPDATE
+ DELETE : DELETE
+ 
+ DML : CREATE, UPDATE, DELETE는 트랜잭션을 동반. 반드시 COMMIT, ROLLBACK사용
+
+ JDBC -> ORACLE
+ -- 전체조회(함수), 조건조회(함수), 삭제(함수), 수정(함수), 삽입(함수)
+ 
+ -- public List<Emp> getEmpAllList(){ select * from emp...}
+ -- public Emp getEmpListByEmpno(int empno) {select * from emp where empno=?}
+ -- public int insertEmp(Emp emp) { inset into emp values(?, ?, ?, ?) }
+ 
+ 
+*/
+
+-------------------------------------------------------------------------------
+-- [DDL]
+-- CREATE, ALTER, DROP (테이블 기준)
+
+SELECT * FROM USER_TABLES WHERE UPPER(TABLE_NAME)='BOARD';
+
+
+CREATE TABLE BOARD (
+ BOARDID NUMBER,
+ TITLE VARCHAR2(50),
+ CONTENT VARCHAR2(4000),
+ REGDATE DATE
+);
+
+ALTER TABLE BOARD ADD CONSTRAINTS BOARDID_PK PRIMARY KEY(BOARDID);
+
+------------------------------------------------------------------------------
+-- 개발자 편하게 살기
+SELECT * FROM USER_TABLES WHERE UPPER(TABLE_NAME)='BOARD';
+SELECT * FROM USER_CONSTRAINTS WHERE UPPER(TABLE_NAME)='BOARD';
+
+-------------------------------------------------------------------------------
+-- ORACLE 11G 가상컬럼 (조합컬럼)
+-- 학생성적 테이블 : 국어, 영어, 수학, 총점 컬럼
+-- 국어, 영어, 수학 데이터만 INSERT하면 자동으로 총점이 구해졌으면..
+
+CREATE TABLE VTABLE (
+ NO1 NUMBER,
+ NO2 NUMBER,
+ NO3 NUMBER GENERATED ALWAYS AS (NO1+NO2) VIRTUAL
+);
+
+INSERT INTO VTABLE(NO1, NO2) VALUES(2,3);
+COMMIT;
+SELECT * FROM VTABLE;
+
+INSERT INTO VTABLE(NO1, NO2, NO3) VALUES(2,3, 10); --  에러
+
+-- 컬럼의 정보 보기 (DEFAULT VALUE확인 가능)
+
+SELECT COLUMN_NAME, DATA_TYPE, DATA_DEFAULT 
+FROM USER_TAB_COLUMNS WHERE UPPER(TABLE_NAME)='VTABLE';
+
+-- 실무에서 활용하는 코드
+-- 제품정보 (입고일) 분기별 데이터 (4분기)
+-- 입고일 : 2019-03-01 >> 1분기
+
+CREATE TABLE VTABLE2 (
+  NO NUMBER, -- 순번
+  P_CODE CHAR(4), --제품코드
+  P_DATE CHAR(8), --입고일(20190303)
+  P_QTY NUMBER, --수량
+  P_BUNGI NUMBER(1) GENERATED ALWAYS AS ( CASE WHEN SUBSTR(P_DATE,5,2) IN ('01','02','03') THEN 1
+                                               WHEN SUBSTR(P_DATE,5,2) IN ('04','05','06') THEN 2
+                                               WHEN SUBSTR(P_DATE,5,2) IN ('07','08','09') THEN 3
+                                               ELSE 4
+                                          END ) VIRTUAL
+);
+
+
+SELECT COLUMN_NAME, DATA_TYPE, DATA_DEFAULT 
+FROM USER_TAB_COLUMNS WHERE UPPER(TABLE_NAME)='VTABLE2';
+
+INSERT INTO VTABLE2(NO, P_CODE, P_DATE, P_QTY) VALUES(1,'A100', '20190322', 20);
+INSERT INTO VTABLE2(NO, P_CODE, P_DATE, P_QTY) VALUES(2,'A200', '20190722', 20);
+INSERT INTO VTABLE2(NO, P_CODE, P_DATE, P_QTY) VALUES(3,'A300', '20190222', 20);
+INSERT INTO VTABLE2(NO, P_CODE, P_DATE, P_QTY) VALUES(4,'A400', '20191222', 20);
+
+SELECT * FROM VTABLE2;
+
+COMMIT;
+
+------------------------------------------------------------------------------
+-- DDL 테이블 다루기 (오라클.PDF 138P)
+
+-- 1. 테이블 생성하기
+CREATE TABLE TEMP6(ID NUMBER);
+
+-- 2. 테이블 생성했는데 컬럼 하나를 누락
+-- 기본 테이블에 컬럼 추가하기
+ALTER TABLE TEMP6 
+ADD ENAME VARCHAR2(20);
+
+-- 3. 기존테이블에 있는 컬럼의 이름을 잘못 표기 (ENAME -> USERNAME)
+ALTER TABLE TEMP6 
+RENAME COLUMN ENAME TO USERNAME;
+
+DESC TEMP6;
+
+
+-- 4. 기존 테이블에 있는 기존컬럼의 타입 정보 수정하기
+ALTER TABLE TEMP6
+MODIFY(USERNAME VARCHAR2(2000));
+
+-- 5. 기존 테이블에 있는 기존컬럼 삭제
+ALTER TABLE TEMP6
+DROP COLUMN USERNAME;
+
+
+-- PRIMARY KEY 추가
+ALTER TABLE TEMP6
+ADD CONSTRAINTS ID_PK PRIMARY KEY(ID);
+
+-- 6.테이블 삭제
+-- 6.1 데이터만 삭제 : DELETE (기존 데이터가 있는 크기를 유지)
+-- 테이블 처음 만들면 처음에 지정된 크기 >> 데이터를 넣으면 데이터 크기가 증가
+-- EX) 처음 1M >> 10만건 >> 100M >> DELETE 10만건 삭제 >> 여전히 테이블의 크기는 100M
+-- 테이블 데이터 삭제하면서 공간의 크기를 줄이는 방법 : TRUNCATE
+-- TRUNCATE (WHERE절 사용불가)
+-- EX) 처음 1M >> 10만건 >> 100M >> DELETE 10만건 삭제 >> 테이블의 크기는 1M
+
+-- 6.2 테이블자체의 삭제
+-- DROP
+DROP TABLE TEMP6;
+
+
+
+DESC TEMP6;
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='TEMP6';
+
+--------------------------------------------------------------------------------
+-- 테이블 제약 설정
+-- 오라클.PDF (114PAGE)
+-- 데이터무결성 확보
+-- 제약(CONSTRAINT) : INSERT, UPDATE 주로 적용
+/*
+NOT NULL(NN) : 열은 NULL값을 포함할 수 없습니다.
+
+UNIQUE KEY(UK) : 테이블의 모든 행을 [유일하게 하는 값]을 가진 열(NULL을 허용)
+-- UNIQUE제약은 NULL값을 가질 수 있다.
+
+PRIMARY KEY(PK) 유일하게 테이블의 각행을 식별(NOT NULL과 UNIQUE조건을 만족)
+NOT NULL하고 UNIQUE한 제약 (내부적으로 INDEX가 자동 설정)
+
+FOREIGN KEY(FK) 열과 참조된 열 사이의 외래키 관계를 적용하고 설정
+(참조제약) [테이블]과 [테이블]간의 관계 설정
+
+CHECK(CK) : 참이어야 하는 조건을 지정함 (대부분 업무규칙을 설정)
+설정한 범위 내의 값만 입력받겠다. (GENDER : 컬럼에 '남' 또는 '여' 데이터만)
+
+*/
+
+--1.
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='EMP'; -- ORACLE은 NOT NULL도 제약으로 본다
+
+CREATE TABLE TEMP7 (
+  ID NUMBER PRIMARY KEY -- 권장하지 않음 (줄임표현) SYS_C0011075 (나중에 제약을 수정, 삭제할때 임의로 만든 이름으로 쓰므로 )
+);
+
+DROP TABLE TEMP7;
+
+CREATE TABLE TEMP7 (
+  ID NUMBER CONSTRAINT PK_TEMP7_ID PRIMARY KEY, -- 관용적 표현 : PK_테이블명_컬럼명 
+  NAME VARCHAR2(20) NOT NULL,
+  ADDR VARCHAR2(50)
+);
+
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='TEMP7'; 
+
+INSERT INTO TEMP7 (ID, NAME, ADDR) VALUES(1, '홍길동','서울시 강남구');
+INSERT INTO TEMP7 (ID, NAME, ADDR) VALUES(2, '김유신','서울시 강남구');
+
+COMMIT;
+
+SELECT * FROM TEMP7;
+
+--1. PRIMARY KEY는 테이블에 몇개까지 걸 수 있을까요? 1개 
+-- 여러개의 컬럼을 묶어서 1개는 가능 (ENAME, AGE) => 복합키
+
+CREATE TABLE TEMP8 (
+  ID NUMBER CONSTRAINTS PK_TEMP8_ID PRIMARY KEY,
+  NAME VARCHAR2(20) NOT NULL,
+  JUMIN CHAR(6) CONSTRAINTS UK_TEMP8_JUMIN UNIQUE,  -- 중복값(X) >> NULL도 허용  : JUMIN CHAR(6) NOT NULL CONSTRAINTS UK_TEMP8_JUMIN UNIQUE
+  ADDR VARCHAR2(20)
+);
+
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='TEMP8';
+
+INSERT INTO TEMP8(ID, NAME, JUMIN, ADDR) VALUES(10,'홍길동', '123456', '경기도');
+INSERT INTO TEMP8(ID, NAME, JUMIN, ADDR) VALUES(20,'김유신', '223456', '경기도');
+
+INSERT INTO TEMP8(ID, NAME, ADDR) VALUES(30,'김우산', '경기도');
+INSERT INTO TEMP8(ID, NAME, ADDR) VALUES(40,'김양산',  '경기도'); -- NULL은 중복체크 안되요 
+
+--------------------------------------------------------------------------------
+-- 테이블 생성 후 제약 걸기
+
+CREATE TABLE TEMP9 (ID NUMBER);
+
+-- 기존 테이블에 제약 추가하기
+-- 주의사항 : 테이블에 기존 데이터가 제약을 위반한다면 제약은 추가되지 않음
+ALTER TABLE TEMP9 ADD CONSTRAINTS PK_TEMP9_ID PRIMARY KEY(ID);
+
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='TEMP9';
+
+ALTER TABLE TEMP9
+ADD ENAME VARCHAR2(20);
+
+DESC TEMP9;
+
+-- NOT NULL제약 추가하기
+ALTER TABLE TEMP9
+MODIFY (ENAME NOT NULL);
+
+DESC TEMP9;
+
+----------------------------------------------------------------------------
+--[CHECK] 제약
+-- WHERE 조건과 동일한 형태의 제약 >> WHERE GENDER IN ('남','여');
+CREATE TABLE TEMP10 (
+  ID NUMBER CONSTRAINT PK_TEMP10_ID PRIMARY KEY,
+  NAME VARCHAR2(20) NOT NULL,
+  JUMIN CHAR(6) CONSTRAINT UK_TEMP10_JUMIN UNIQUE,
+  ADDR VARCHAR2(20),
+  AGE NUMBER CONSTRAINT  CK_TEMP10_AGE CHECK(AGE>=19)
+);
+
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='TEMP10';
+
+INSERT INTO TEMP10 (ID, NAME, JUMIN, ADDR, AGE) 
+VALUES(100, '홍길동', '123456','서울시', 25);
+COMMIT;
+
+INSERT INTO TEMP10 (ID, NAME, JUMIN, ADDR, AGE) 
+VALUES(200, '김유신', '123456','부산시', 18);  -- ORA-02290: 체크 제약조건(BITUSER.CK_TEMP10_AGE)이 위배되었습니다
+
+
+SELECT * FROM TEMP10;
+
+-------------------------------------------------------------------------------
+-- 참조제약 : 테이블과 테이블과의 제약
+-- EMP (DEPTNO) 컬럼은 DEPT (DEPTN) 컬럼을 참조한다.
+
+CREATE TABLE C_EMP
+AS 
+ SELECT EMPNO, ENAME, DEPTNO FROM EMP WHERE 1=2;
+ 
+CREATE TABLE C_DEPT
+AS
+ SELECT DEPTNO, DNAME FROM DEPT WHERE 1=2;
+ 
+ SELECT * FROM C_EMP;
+ 
+ SELECT * FROM C_DEPT;
+ 
+ ALTER TABLE C_DEPT
+ ADD CONSTRAINTS PK_DEPT_DEPTNO PRIMARY KEY(DEPTNO);
+ 
+ -- 1.참조제약 (C_EMP 테이블에 있는 DEPTNO 컬럼
+ -- C_DEPT에 먼저 PRIMARY KEY를 지정해야 함
+ 
+ ALTER TABLE C_EMP
+ ADD CONSTRAINTS FK_EMP_DEPTNO FOREIGN KEY(DEPTNO) REFERENCES C_DEPT (DEPTNO);
+ -- C_DEPT >> DEPTNO에서 데이터 빌려쓸거야 (전 신용있어요 빌려가 주세요)
+ -- DEPTNO의 값은 데이터 중복데이터 없고 NULL값 없어요 PRIMARY KEY
+ 
+ DESC C_EMP;
+ SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='C_EMP';
+ 
+ INSERT INTO C_DEPT(DEPTNO, DNAME) VALUES(100, '인사팀');
+ INSERT INTO C_DEPT(DEPTNO, DNAME) VALUES(200, '관리팀');
+ INSERT INTO C_DEPT(DEPTNO, DNAME) VALUES(300, '회계팀');
+ COMMIT;
+ 
+ SELECT * FROM C_DEPT;
+ 
+ -- 신입사원 입사
+ INSERT INTO C_EMP(EMPNO, ENAME) VALUES(100,'홍길동'); -- FK : FK는 NOT NULL제약조건이 없다. (NULL값 허용)
+ -- 신입사원은 부서를 갖지 않을 수 있다.
+ 
+ -- 규칙 : 신입사원은 무조건 부서를 가져야 한다. (DEPTNO NOT NULL CONSTRAINT FK_EMP_DEPTNO FOREIN KEY(DEPTNO) REFERENCES DEPT (DEPTNO))
+ SELECT * FROM C_EMP;
+ 
+ INSERT INTO C_EMP(EMPNO, ENAME, DEPTNO) VALUES(200, '아무개', 500);
+ 
+ ----------------------------------------------------------------------------
+ -- 테이블 (부모 자식 테이블)
+ -- 테이블 (MASTER, DETAIL)
+ -- C_EMP 테이블 : 자식 테이블, DETAIL
+ -- C_DEPT 테이블 : 부모 테이블, MASTER
+ 
+ -- 두개 테이블 DEPTNO 관계에서 PRIMARY KEY가 있는 곳이 부모, FOREIGN KEY가 있는 곳이 자식
+ 
+ -- 주의점
+ SELECT  * FROM C_EMP;
+ SELECT * FROM C_DEPT;
+ -- C_DEPT테이블에서 C_EMP가 참조하고 있는 FK데이터 삭제 불가능
+ DELETE FROM C_DEPT WHERE DEPTNO=300;
+ -- C_DEPT테이블에서 C_EMP가 참조하고 있지 않은 FK데이터 삭제 가능
+ 
+ DELETE FROM C_EMP;
+ 
+ ------------------------------------------------------------------------------
+ 
+ 
+ --학생 성적 테이블
+--학번의 데이터는 중복되거나 NULL 값을 허용하면 안된다
+--이름 NULL 값을 허용하지 않는다
+--국어
+--영어
+--수학 점수 컬럼은 숫자 타입이고 NULL 값을 허용
+--는 값을 입력하지 않으면  default로 0값을 갖는다
+--총점 ,평균 컬럼은 가상컬럼으로(조합컬럼) 생성한다
+--학과코드는 학과 테이블에 학과코드를 참조한다
+--학번 , 이름 , 국어 , 영어 , 수학 , 총점 , 평균 , 학과코드
+CREATE TABLE GRADE (
+  STUDENT_ID NUMBER NOT NULL,
+  NAME VARCHAR2(30) NOT NULL,
+  KOREAN NUMBER DEFAULT 0,
+  ENGLISH NUMBER DEFAULT 0,
+  MATH NUMBER DEFAULT 0,
+  TOTAL NUMBER  GENERATED ALWAYS AS (KOREAN+ENGLISH+MATH) VIRTUAL,
+  AVERAGE NUMBER  GENERATED ALWAYS AS ((KOREAN+ENGLISH+MATH)/3) VIRTUAL,
+  DEPT_NO NUMBER
+);
+
+ALTER TABLE GRADE
+ADD CONSTRAINTS PK_GRADE_STDUENT_ID PRIMARY KEY(STUDENT_ID);
+
+ALTER TABLE GRADE
+ADD CONSTRAINTS FK_GRADE_STDUENT_ID FOREIGN KEY(DEPT_NO) REFERENCES DEPARTMENT(DEPT_NO);
+
+DESC GRADE;
+SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME='GRADE';
+
+--학과 테이블
+--학과코드 데이터는 중복되거나 NULL 값을 허용하면 안된다,
+--학과명 은 null값을 허락하지 않는다
+CREATE TABLE DEPARTMENT (
+  DEPT_NO NUMBER NOT NULL,
+  DEPT_NAME VARCHAR2(50) NOT NULL
+);
+
+ALTER TABLE DEPARTMENT
+ADD CONSTRAINTS PK_DEPT_DEPT_NO PRIMARY KEY(DEPT_NO);
+
+--학과코드 , 학과명
+
+--그리고 select 결과는
+--학번 , 이름  총점, 평균 , 학과코드 , 학과명 을 출력하세요
+
+INSERT INTO DEPARTMENT VALUES(100,'회계학과');
+INSERT INTO DEPARTMENT VALUES(200,'전산학과');
+COMMIT;
+
+INSERT INTO GRADE(STUDENT_ID, NAME, KOREAN, ENGLISH, MATH, DEPT_NO) VALUES(10, '우세림', 100, 100, 60, 200);
+INSERT INTO GRADE(STUDENT_ID, NAME, KOREAN, ENGLISH, MATH, DEPT_NO) VALUES(20, '김동민', 100, 100, 100, 100);
+
+SELECT G.STUDENT_ID, G.NAME, G.TOTAL, ROUND(G.AVERAGE) AS AVERAGE, D.DEPT_NO, D.DEPT_NAME
+FROM GRADE G INNER JOIN DEPARTMENT D
+ON G.DEPT_NO = D.DEPT_NO;
+
