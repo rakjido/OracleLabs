@@ -2084,3 +2084,855 @@ SELECT G.STUDENT_ID, G.NAME, G.TOTAL, ROUND(G.AVERAGE) AS AVERAGE, D.DEPT_NO, D.
 FROM GRADE G INNER JOIN DEPARTMENT D
 ON G.DEPT_NO = D.DEPT_NO;
 
+-------------------------------------------------------------------------------
+-- VIEW 객체 (가상테이븖)
+-- 오라클.PDF PAGE 192
+-- CREATE VIEW 뷰이름 AS [SELECT 구문: VIEW를 통해서 볼 수 있는 데이터 목록]
+-- VIEW는 테이블처럼 사용가능 [가상테이블] --> EMP, DEPT와 같은 논리로 접근 사용
+-- VIEW는 메모리상에만 존재하는 가상테이블 [ SUBQEURY -> IN LINE VIEW )
+-- 사용법은 일반 테이블과 동일
+-- DML (INSERT, UPDATE, DELETE) => VIEW통해서 DML가능 => VIEW가 가지고 있는 (볼 수 있는) 실테이블 데이터를 변경
+
+-- VIEW는 별도 권한 필요 SQL 오류: ORA-01031: 권한이 불충분합니다
+CREATE VIEW V_001 
+AS 
+  SELECT EMPNO, ENAME
+  FROM EMP;
+  
+SELECT * FROM V_001; -- 내부적으로 VIEW가 가지는 QUERY를 실행
+
+-- VIEW의 사용목적
+--1. 개발자의 편리성 (JOIN, SUBQUERY) >> 가상테이블 개념
+--2. 편리성 (QUERY의 단순화) -> 복잡한 QUERY를 미리 만들어두고 사용
+--3. 보안(권한 처리) -> 노출하고 싶은 데이터만 모아서 VIEW 생성 -> VIEW의 권한만 부여
+
+
+CREATE VIEW V_EMP
+AS
+  SELECT EMPNO, ENAME, JOB, HIREDATE 
+  FROM EMP;
+
+SELECT * FROM V_EMP;
+
+-- 편리성 (쿼리 단순화)
+CREATE VIEW V_002
+AS
+  SELECT E.EMPNO, E.ENAME, D.DEPTNO, D.DNAME
+  FROM EMP E JOIN DEPT D
+  ON E.DEPTNO = D.DEPTNO;
+  
+SELECT * FROM V_002;
+
+CREATE VIEW V_003 -- VIEW에서는 ALIAS 이름을 부여해야 함
+AS
+  SELECT DEPTNO, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY DEPTNO;
+  
+SELECT *
+FROM EMP E JOIN V_003 S
+ON E.DEPTNO = S.DEPTNO
+WHERE E.SAL > S.AVG_SAL;
+
+-- 테이블 1개 이상  JOIN > SUBQUERY > VIEW
+
+
+--CREATE [OR REPLACE] [FORCE | NOFORCE] VIEW view_name [(alias[,alias,...])]
+--AS Subquery
+--[WITH CHECK OPTION [CONSTRAINT constraint ]]
+--[WITH READ ONLY]
+--
+--OR REPLACE 이미 존재한다면 다시 생성한다.
+--FORCE Base Table 유무에 관계없이 VIEW 을 만든다.
+--NOFORCE 기본 테이블이 존재할 경우에만 VIEW 를 생성한다.
+--view_name VIEW 의 이름
+--Alias Subquery 를 통해 선택된 값에 대한 Column 명이 된다.
+--Subquery SELECT 문장을 기술한다.
+--WITH CHECK OPTION VIEW 에 의해 액세스 될 수 있는 행만이 입력,갱신될 수 있다.
+--Constraint CHECK OPTON 제약 조건에 대해 지정된 이름이다.
+--WITH READ ONLY 이 VIEW 에서 DML 이 수행될 수 없게 한다.
+
+
+DROP VIEW V_001;
+
+CREATE OR REPLACE VIEW V_007
+AS 
+  SELECT AVG(SAL) AS AVGSAL FROM EMP;
+  
+SELECT * FROM V_007;
+
+CREATE OR REPLACE VIEW V_007
+AS 
+  SELECT ROUND(AVG(SAL),0) AS AVGSAL FROM EMP;
+
+-- VIEW를 통한 DML가능 (INSERT, UPDATE, DELETE)
+-- VIEW테이블이 아니기 때문에 VIEW를 통해서 볼 수 있는 데이터에 대해서만 가능
+-- 복합VIEW(하나 이상의 테이블로 구성)는 DML 작업하지 말것. 
+
+SELECT * FROM V_EMP; -- VIEW통해서 볼 수 있는 데이터 (EMPNO, ENAME, JOB, HIREDATE)
+
+UPDATE V_EMP --VIEW를 통해서 SAL데이터를 볼 수 없다.DML 불가능
+SET SAL=0;
+
+UPDATE V_EMP -- 원본 데이터를 UPDATE > EMP의 테이블 UPDATE
+SET JOB='IT'
+;
+
+SELECT * FROM EMP;
+
+CREATE OR REPLACE VIEW V_EMP2
+AS 
+  SELECT * FROM EMP WHERE DEPTNO=20;
+  
+SELECT * FROM V_EMP2;
+
+UPDATE V_EMP2 -- VIEW가 접근가능한 데이터만 업데이트
+SET SAL=0;
+
+SELECT * FROM EMP;
+
+-- VIEW 목록보기
+SELECT * FROM USER_VIEWS;
+
+
+--1. 30번 부서 사원들의 직위, 이름, 월급을 담는 VIEW를 만들어라.
+CREATE OR REPLACE VIEW V_E01
+AS
+  SELECT JOB, ENAME, SAL FROM EMP WHERE DEPTNO=30;
+ 
+ 
+--2. 30번 부서 사원들의  직위, 이름, 월급을 담는 VIEW를 만드는데,
+-- 각각의 컬럼명을 직위, 사원이름, 월급으로 ALIAS를 주고 월급이
+-- 300보다 많은 사원들만 추출하도록 하라.
+-- create or replace view view001 (컬럼명, 컬럼명, .....)  
+CREATE OR REPLACE VIEW V_E02 (직위, 사원이름, 월급)
+AS
+  SELECT JOB , ENAME , SAL FROM EMP WHERE DEPTNO=30 AND SAL>300;
+
+SELECT * FROM V_E02;
+ 
+--3. 부서별 최대월급, 최소월급, 평균월급을 담는 VIEW를 만들어라.
+CREATE OR REPLACE VIEW V_E03
+AS 
+  SELECT DEPTNO, MAX(SAL) AS MAX_SAL, MIN(SAL) AS MIN_SAL, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY DEPTNO;
+
+--4. 부서별 평균월급을 담는 VIEW를 만들되, 평균월급이 2000 이상인
+-- 부서만 출력하도록 하라.
+
+CREATE OR REPLACE VIEW V_E04
+AS
+  SELECT DEPTNO, AVG(SAL) AS AVG_SAL
+  FROM EMP
+  GROUP BY DEPTNO
+  HAVING AVG(SAL)>2000;
+ 
+ SELECT * FROM V_E04;
+
+ 
+--5. 직위별 총월급을 담는 VIEW를 만들되, 직위가 MANAGER인
+-- 사원들은 제외하고 총월급이 3000이상인 직위만 출력하도록 하라.
+CREATE OR REPLACE VIEW V_E05
+AS 
+  SELECT JOB, SUM(SAL) AS TOTAL_SAL
+  FROM EMP
+  GROUP BY JOB
+  HAVING SUM(SAL)>3000;
+
+SELECT * FROM V_E05 WHERE JOB !='MANAGER' AND TOTAL_SAL > 3000;
+--------------------------------------------------------------------------------
+-- DB의 세계
+-- 개발자 : APP (CRUD)
+-- 관리자 : 백업과 복원 (관리: 네트워크, 권한...)
+-- 튜닝 : APP + DB + 네트워크
+        -- SQL 튜닝
+        -- Server 튜닝
+-- 설계 : 모델링 (업무지식)
+
+-------------------------------------------------------------------------------
+-- 시퀀스
+-- 오라클.pdf (p.185)
+-- 순번 추출하기
+-- 자동으로 번호를 생성하는 객체
+
+--CREATE SEQUENCE sequence_name
+--[INCREMENT BY n]
+--[START WITH n]
+--[{MAXVALUE n | NOMAXVALUE}]
+--[{MINVALUE n | NOMINVALUE}]
+--[{CYCLE | NOCYCLE}]
+--[{CACHE | NOCACHE}];
+
+
+--sequence_name SEQUENCE 의 이름입니다.
+--INCREMENT BY n 정수 값인 n 으로 SEQUENCE 번호 사이의 간격을 지정.
+--이 절이 생략되면 SEQUENCE 는 1 씩 증가.
+--START WITH n 생성하기 위해 첫번째 SEQUENCE 를 지정.
+--이 절이 생략되면 SEQUENCE 는 1 로 시작.
+--MAXVALUE n SEQUENCE 를 생성할 수 있는 최대 값을 지정.
+--NOMAXVALUE 오름차순용 10^27 최대값과 내림차순용-1 의 최소값을 지정.
+--MINVALUE n 최소 SEQUENCE 값을 지정.
+--NOMINVALUE 오름차순용 1 과 내림차순용-(10^26)의 최소값을 지정.
+--CYCLE | NOCYCLE 최대 또는 최소값에 도달한 후에 계속 값을 생성할 지의 여부를
+--지정. NOCYCLE 이 디폴트.
+--CACHE | NOCACHE 얼마나 많은 값이 메모리에 오라클 서버가 미리 할당하고 유지 (미리 번호를 만들어 놓는 것)
+--하는가를 지정. 디폴트로 오라클 서버는 20 을 CACHE.
+
+DROP TABLE BOARD;
+
+CREATE TABLE BOARD (
+  BOARDID NUMBER CONSTRAINT PK_BOARD_ID PRIMARY KEY,
+  TITLE VARCHAR2(100)
+);
+
+-- BOARDID 컬럼 (NOT NULL, UNIQUE, INDEX구성된다)
+-- 개발자 : BOARDID데이터는
+-- 개발자 : WHERE BOARDID =?. 무조건 1건
+
+-- INSERT INTO BOARD(BOARDID, TITLE) VALUES ( )
+-- 그러면 중복되지 않고 NULL값이 아니라는 보장
+
+-- 조건 : 처음 글을 쓰면 1이라는 값을 INSERT. 그 다음 글부터는 2,3,4, 순차적인 값을 INSERT
+
+
+INSERT INTO BOARD VALUES(1, '타이틀1');
+
+INSERT INTO BOARD 
+SELECT MAX(NVL(BOARDID,0))+1, '타이틀2' FROM BOARD;
+
+SELECT * FROM BOARD;
+
+CREATE SEQUENCE SEQ_BOARD_ID 
+START WITH 1
+INCREMENT BY 1
+;
+
+INSERT INTO BOARD VALUES(SEQ_BOARD_ID.NEXTVAL, '타이틀1');
+INSERT INTO BOARD VALUES(SEQ_BOARD_ID.NEXTVAL, '타이틀2');
+
+SELECT * FROM BOARD;
+
+-------------------------------------------------------------------------------
+-- SEQUENCE 번호 추출 (규칙) : 중복값이 없고 순차적인 값 (공유객체)
+------------------------------------------------------------------------------
+CREATE SEQUENCE BOARD_NUM;
+
+SELECT * FROM SYS.USER_SEQUENCES;
+
+--1.4.1 NEXTVAL 과 CURRVAL 의사열
+--가) 특징
+--1) NEXTVAL 는 다음 사용 가능한 SEQUENCE 값을 반환 한다.
+--－188－
+--2) SEQUENCE 가 참조될 때 마다, 다른 사용자에게 조차도 유일한 값을 반환한다.
+--3) CURRVAL 은 현재 SEQUENCE 값을 얻는다.
+--4) CURRVAL 이 참조되기 전에 NEXTVAL 이 사용되어야 한다.
+
+-- 실채번
+SELECT BOARD_NUM.NEXTVAL FROM DUAL;
+-- 몇번까지 했지? (채번하지 않고 정보만 준다)
+SELECT BOARD_NUM.CURRVAL FROM DUAL; -- 마지막으로 추출한 번호는 2
+
+CREATE SEQUENCE KBOARD_NUM;
+
+CREATE TABLE KBOARD (
+  NUM NUMBER CONSTRAINT PK_KBOARD_ID PRIMARY KEY,
+  TITLE VARCHAR2(100)
+);
+
+INSERT INTO KBOARD (NUM, TITLE) VALUES (KBOARD_NUM.NEXTVAL, '타이틀1');
+INSERT INTO KBOARD (NUM, TITLE) VALUES (KBOARD_NUM.NEXTVAL, '타이틀2');
+INSERT INTO KBOARD (NUM, TITLE) VALUES (KBOARD_NUM.NEXTVAL, '타이틀3');
+
+SELECT * FROM KBOARD;
+
+SELECT KBOARD_NUM.CURRVAL FROM DUAL;
+
+-------------------------------------------------------------------------------
+-- SEQUENCE하나로 여러개의 테이블에서 사용가능
+
+-- TIP)
+-- MS-SQL : 2012버전부터 SERQUENCE도입
+-- CREATE TABLE BOARD(BOARDNUM INT IDENTITY(1,1), TITLE VHARCHAR(20));
+-- INSERT INTO BOARD(TITLE) VALUES('방가');
+-- MYSQL : AUTO_INCREMENT
+-- CREATE TABLE BOARD(BOARDNUM INT AUTO_INCREMENT, TITLE VHARCHAR(20));
+
+CREATE SEQUENCE SEQ_NUM
+START WITH 10
+INCREMENT BY 2;
+
+SELECT SEQ_NUM.NEXTVAL FROM DUAL;
+SELECT SEQ_NUM.NEXTVAL FROM DUAL;
+
+--------------------------------------------------------------------------------
+-- 개발자 필수 2
+-- ROWNUM 의사컬럼 : 실제 물리적으로 존재하는 컬럼이 아니고 논리적으로 존재
+-- ROWNUM : 실제로 테이블에 컬럼으로 존재하지 않지만 내부적으로 행 번호 부여할 수 있는 의사컬럼
+-- ROWID : 주소값 (행이 실제로 저장되는 내부 주소값) -> 인덱스 만들때 사용
+
+-- ROWNUM은 PAGINATION의 필수
+
+SELECT ROWNUM, EMPNO, ENAME FROM EMP;  --SELECT한 결과에 순번 부여
+
+-- TOP-N 쿼리
+-- 테이블에서 조건에 맞는 상위(TOP)레코드(ROW) N개 추출
+-- MS-SQL : SELECT TOP 10, * FROM EMP ORDER BY SAL DESC;
+
+SELECT ROWNUM, EMPNO, ENAME FROM EMP WHERE DEPTNO=10;
+
+SELECT ROWID FROM EMP;
+
+-- 1.정렬의 기분을 정의하는 작업(선행)
+-- 2.정렬이 된 상황에서 앞에 순번 조건절 제시
+-- 1단계
+SELECT *
+FROM (
+SELECT * 
+FROM EMP
+ORDER BY SAL DESC
+) E
+;
+
+-- 2단계
+SELECT ROWNUM AS "NUM", E.*
+FROM (
+SELECT * 
+FROM EMP
+ORDER BY SAL DESC
+) E
+;
+
+-- 3단계
+SELECT ROWNUM AS "NUM", E.*
+FROM (
+SELECT * 
+FROM EMP
+ORDER BY SAL DESC
+) E
+WHERE ROWNUM <=5;
+;
+-------------------------------------------------------------------------------
+
+SELECT *
+FROM (
+  SELECT ROWNUM AS "NUM", E.*
+  FROM (
+  SELECT * 
+  FROM EMP
+  ORDER BY SAL DESC
+  ) E
+)N
+WHERE N.NUM<=10;
+
+-------------------------------------------------------------------------------
+-- 게시판 (페이징 처리)
+-- 1000건 데이터
+-- 10건씩 나누어서 보여주기
+
+-- 총 100건
+-- pagesize=10 :한 화면에 (페이지) 보여줄 데이터 건수 row수
+-- 1 ~ 10 : 1 page (DB에서 1~10글까지 SELECT 가지고 APP출력)
+-- 11~ 20 : 2 page
+
+SELECT *
+FROM (
+  SELECT ROWNUM AS "NUM", E.*
+  FROM (
+  SELECT * 
+  FROM EMP
+  ORDER BY SAL DESC
+  ) E
+)N
+WHERE N.NUM BETWEEN 11 AND 20;
+
+------------------------------------------------------------------------------
+-- HR계정으로 이동
+
+-- 41~50 사원 데이터 출력하세요 (사번은 낮은 순으로 )
+SELECT * FROM HR.EMPLOYEES;
+
+SELECT * 
+FROM (
+  SELECT ROWNUM AS NUM, E.*
+  FROM HR.EMPLOYEES E
+  ORDER BY EMPLOYEE_ID ASC
+) N
+WHERE N.NUM BETWEEN 41 AND 50;
+
+
+--------------------------------------------------------------------------------
+-- SQL 기본과정 END
+-- SQL 고급과정 (3차 프로젝트 전에)
+-- 고급 QUERY 순위, RANK
+-- PL/SQL
+-- 변수, 제어문, 커서, 함수, 프로시져, 트리거, 스케쥴
+--------------------------------------------------------------------------------
+
+-- 1차 종합 TEST 50문제
+
+--1> 부서테이블의 모든 데이터를 출력하라.
+  SELECT * FROM EMP;
+ 
+--2> EMP테이블에서 각 사원의 직업, 사원번호, 이름, 입사일을 출력하라.
+  SELECT JOB, EMPNO, ENAME, HIREDATE FROM EMP;
+ 
+--3> EMP테이블에서 직업을 출력하되, 각 항목(ROW)가 중복되지 않게
+-- 출력하라.
+  SELECT DISTINCT JOB FROM EMP;
+ 
+--4> 급여가 2850 이상인 사원의 이름 및 급여를 출력하라.
+  SELECT ENAME, SAL FROM EMP WHERE SAL >=2850;
+ 
+--5> 사원번호가 7566인 사원의 이름 및 부서번호를 출력하라.
+  SELECT ENAME, DEPTNO FROM EMP WHERE EMPNO=7566;
+ 
+--6> 급여가 1500이상 ~ 2850이하의 범위에 속하지 않는 모든 사원의 이름
+-- 및 급여를 출력하라.
+ 
+  SELECT ENAME, SAL
+  FROM EMP
+  WHERE SAL <1500 OR SAL > 2850;
+ 
+--7> 1981년 2월 20일 ~ 1981년 5월 1일에 입사한 사원의 이름,직업 및 
+--입사일을 출력하라. 입사일을 기준으로 해서 오름차순으로 정렬하라.
+ 
+  SELECT ENAME, JOB, HIREDATE 
+  FROM EMP 
+  WHERE HIREDATE BETWEEN TO_DATE('19810220','YYYYMMDD') AND TO_DATE('19810501','YYYYMMDD')
+  ORDER BY HIREDATE ASC
+  ;
+ 
+--8> 10번 및 30번 부서에 속하는 모든 사원의 이름과 부서 번호를
+-- 출력하되, 이름을 알파벳순으로 정렬하여 출력하라.
+ 
+ SELECT ENAME, DEPTNO
+ FROM EMP
+ WHERE DEPTNO IN (10, 30)
+ ORDER BY ENAME ASC;
+ 
+--9> 10번 및 30번 부서에 속하는 모든 사원 중 급여가 1500을 넘는
+-- 사원의 이름 및 급여를 출력하라.
+--(단 컬럼명을 각각 employee 및 Monthly Salary로 지정하시오)
+ 
+ SELECT ENAME as "EMPLOYEE", SAL as "Monthly Salary"
+ FROM EMP
+ WHERE DEPTNO IN (10, 30)
+ AND SAL>1500;
+ 
+--10> 관리자가 없는 모든 사원의 이름 및 직위를 출력하라.
+ SELECT ENAME, JOB
+ FROM EMP 
+ WHERE MGR IS NULL;
+ 
+--11> 커미션을 받는 모든 사원의 이름, 급여 및 커미션을 출력하되, 
+-- 급여를 기준으로 내림차순으로 정렬하여 출력하라.
+ 
+ SELECT ENAME, SAL, COMM
+ FROM EMP
+ WHERE COMM IS NOT NULL
+ ORDER BY SAL DESC;
+ 
+--12> 이름의 세 번째 문자가 A인 모든 사원의 이름을 출력하라.
+ SELECT ENAME
+ FROM EMP
+ WHERE ENAME LIKE '__A%';
+ 
+--13> 이름에 L이 두 번 들어가며 부서 30에 속해있는 사원의 이름을 
+--출력하라.
+ 
+ SELECT ENAME
+ FROM EMP
+ WHERE ENAME LIKE '%LL%'
+ AND DEPTNO=30;
+ 
+--14> 직업이 Clerk 또는 Analyst 이면서 급여가 1000,3000,5000 이 
+-- 아닌 모든 사원의 이름, 직업 및 급여를 출력하라.
+ SELECT ENAME, JOB, SAL
+ FROM EMP
+ WHERE JOB IN ('CLERK', 'ANALYST')
+ AND SAL NOT IN (1000, 3000, 5000);
+ 
+--15> 사원번호, 이름, 급여 그리고 15%인상된 급여를 정수로 표시하되 
+--컬럼명을 New Salary로 지정하여 출력하라.
+ 
+ SELECT EMPNO, ENAME, SAL, ROUND(SAL*1.15,0) AS "New Salary"
+ FROM EMP;
+ 
+--16> 15번 문제와 동일한 데이타에서 급여 인상분(새 급여에서 이전 
+-- 급여를 뺀 값)을 추가해서 출력하라.(컬럼명은 Increase로 하라). 
+ 
+ SELECT EMPNO, ENAME, SAL, ROUND(SAL*1.15,0) AS "New Salary", ROUND(SAL*0.15,0) AS "Increase"
+ FROM EMP;
+ 
+--18> 모든 사원의 이름(첫 글자는 
+-- 대문자로, 나머지 글자는 소문자로 표시) 및 이름 길이를 표시하는
+-- 쿼리를 작성하고 컬럼 별칭은 적당히 넣어서 출력하라.
+ 
+ SELECT UPPER(SUBSTR(ENAME,1,1))||LOWER(SUBSTR(ENAME,2)) as NAME, LENGTH(ENAME) AS LENGTH_NAME
+ FROM EMP
+ ;
+ 
+--19> 사원의 이름과 커미션을 출력하되, 커미션이 책정되지 않은 
+-- 사원의 커미션은 'no commission'으로 출력하라.
+  SELECT ENAME, NVL(TO_CHAR(COMM),'no commission') as COMM
+  FROM EMP;
+ 
+ 
+--20> 모든 사원의 이름,부서번호,부서이름을 표시하는 질의를 작성하라.
+  SELECT E.ENAME, D.DEPTNO, D.DNAME
+  FROM EMP E JOIN DEPT D
+  ON E.DEPTNO = D.DEPTNO;
+  
+ 
+--21> 30번 부서에 속한 사원의 이름과 부서번호 그리고 부서이름을 출력하라.
+ SELECT A.ENAME, A.DEPTNO, D.DNAME 
+ FROM EMP A JOIN DEPT D
+ ON A.DEPTNO = D.DEPTNO
+ WHERE A.DEPTNO=30;
+ 
+--22> 30번 부서에 속한 사원들의 모든 직업과 부서위치를 출력하라.
+--(단, 직업 목록이 중복되지 않게 하라.)
+ 
+  SELECT DISTINCT E.JOB, D.LOC
+  FROM EMP E JOIN DEPT D
+  ON E.DEPTNO = D.DEPTNO
+  WHERE D.DEPTNO=30;
+ 
+--23> 커미션이 책정되어 있는 모든 사원의 이름, 부서이름 및 위치를 출력하라.
+ 
+ SELECT E.ENAME, D.DNAME, D.LOC
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ WHERE E.COMM IS NOT NULL
+ ;
+ 
+--24> 이름에 A가 들어가는 모든 사원의 이름과 부서 이름을 출력하라.
+ 
+ SELECT E.ENAME, D.DNAME 
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ WHERE E.ENAME LIKE '%A%';
+ 
+--25> Dallas에서 근무하는 모든 사원의 이름, 직업, 부서번호 및 부서이름을 
+-- 출력하라.
+ SELECT E.ENAME, E.JOB, E.DEPTNO, D.DNAME 
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ WHERE D.LOC='DALLAS';
+ 
+--26> 사원이름 및 사원번호, 해당 관리자이름 및 관리자 번호를 출력하되,
+-- 각 컬럼명을 employee,emp#,manager,mgr#으로 표시하여 출력하라.
+ 
+SELECT E.ENAME as "employee", E.EMPNO as "emp#", M.ENAME as "manager", M.EMPNO as "mgr#"
+FROM EMP E JOIN EMP M
+ON E.MGR=M.EMPNO;
+ 
+ 
+--27> 모든 사원의 이름,직업,부서이름,급여 및 등급을 출력하라.
+ SELECT E.ENAME, E.JOB, D.DNAME, E.SAL, G.GRADE
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ JOIN SALGRADE G
+ ON E.SAL BETWEEN G.LOSAL AND G.HISAL;
+ ;
+ 
+ 
+--28> Smith보다 늦게 입사한 사원의 이름 및 입사일을 출력하라.
+ 
+ SELECT ENAME, HIREDATE
+ FROM EMP
+ WHERE HIREDATE > (
+   SELECT HIREDATE
+   FROM EMP
+   WHERE ENAME='SMITH'
+ );
+ 
+--29> 자신의 관리자보다 먼저 입사한 모든 사원의 이름, 입사일, 
+-- 관리자의 이름, 관리자의 입사일을 출력하되 각각 컬럼명을 
+-- Employee,EmpHiredate, Manager,MgrHiredate로 표시하여 
+-- 출력하라.
+ 
+ SELECT E.ENAME as Empolyee, E.HIREDATE as EmpHiredate, M.ENAME as Manager, M.HIREDATE as MgrHireDate
+ FROM EMP E JOIN EMP M
+ ON E.MGR=M.EMPNO
+ WHERE E.HIREDATE < M.HIREDATE
+ ;
+--30> 모든 사원의 급여 최고액,최저액,총액 및 평균액을 출력하되 
+-- 각 컬럼명을 Maximum,Minimum,Sum,Average로 지정하여 출력하라.
+ 
+ SELECT MAX(SAL) as Maximum, MIN(SAL) as Minimum, SUM(SAL) as Sum, AVG(SAL) as Average로
+ FROM EMP;
+ 
+ 
+--31> 각 직업별로 급여 최저액.최고액,총액 및 평균액을 출력하라.
+ 
+ SELECT JOB, MIN(SAL), MAX(SAL), SUM(SAL), AVG(SAL)
+ FROM EMP
+ GROUP BY JOB;
+ 
+--32> 직업이 동일한 사람 수를 직업과 같이 출력하라.
+ 
+ SELECT JOB, COUNT(EMPNO) as NO
+ FROM EMP
+ GROUP BY JOB;
+ 
+--33> 관리자의 수를 출력하되, 관리자 번호가 중복되지 않게하라.
+-- 그리고, 컬럼명을 Number of Manager로 지정하여 출력하라.
+ 
+ SELECT COUNT(EMPNO) as "Number of Manager"
+ FROM EMP
+ WHERE EMPNO IN (SELECT MGR FROM EMP);
+ 
+
+--34> 최고 급여와 최저 급여의 차액을 출력하라.
+
+ SELECT MAX(SAL)-MIN(SAL) AS DIFF_SAL
+ FROM EMP;
+ 
+--35> 관리자 번호 및 해당 관리자에 속한 사원들의 최저 급여를 출력하라.
+-- 단, 관리자가 없는 사원 및 최저 급여가 1000 미만인 그룹은 제외시키고 
+-- 급여를 기준으로 출력 결과를 내림차순으로 정렬하라.
+
+
+ SELECT E.MGR, MIN(E.SAL)
+ FROM EMP E LEFT JOIN EMP M
+ ON E.MGR = M.EMPNO
+ WHERE M.MGR IS NOT NULL
+ GROUP BY E.MGR
+ HAVING MIN(E.SAL) < 1000
+ ORDER BY MIN(E.SAL) DESC
+ ;
+ 
+ 
+--36> 부서별로 부서이름, 부서위치, 사원 수 및 평균 급여를 출력하라.
+-- 그리고 각각의 컬럼명을 부서명,위치,사원의 수,평균급여로 표시하라.
+ 
+ SELECT D.DNAME as "부서명", D.LOC as "위치", COUNT(E.EMPNO) as "사원의 수", ROUND(AVG(E.SAL)) as "평균급여"
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ GROUP BY D.DNAME, D.LOC;
+ 
+--37> Smith와 동일한 부서에 속한 모든 사원의 이름 및 입사일을 출력하라.
+-- 단, Smith는 제외하고 출력하시오
+
+  SELECT ENAME, HIREDATE
+  FROM EMP
+  WHERE DEPTNO =(SELECT DEPTNO FROM EMP WHERE ENAME='SMITH')
+  AND ENAME !='SMITH';
+ 
+--38> 자신의 급여가 평균 급여보다 많은 모든 사원의 사원 번호, 이름, 급여를 
+--    표시하는 질의를 작성하고 급여를 기준으로 결과를 내림차순으로 정렬하라.
+ SELECT EMPNO, ENAME, SAL
+ FROM EMP
+ WHERE SAL > (
+   SELECT AVG(SAL) FROM EMP 
+ )
+ ORDER BY SAL DESC;
+ 
+--39> 이름에 T가 들어가는 사원의 속한 부서에서 근무하는 모든 사원의 사원번호
+-- 및 이름을 출력하라.
+ 
+ SELECT EMPNO, ENAME
+ FROM EMP
+ WHERE DEPTNO IN (
+   SELECT DEPTNO
+   FROM EMP
+   WHERE ENAME LIKE '%T%'
+);
+ 
+--40> 부서위치가 Dallas인 모든 사원의 이름,부서번호 및 직위를 출력하라.
+ 
+  SELECT E.ENAME, E.DEPTNO, E.JOB
+  FROM EMP E JOIN DEPT D
+  ON E.DEPTNO = D.DEPTNO
+  WHERE D.LOC='DALLAS';
+ 
+--41> KING에게 보고하는 모든 사원의 이름과 급여를 출력하라.
+ 
+ SELECT ENAME, SAL
+ FROM EMP
+ WHERE MGR = (SELECT EMPNO FROM EMP WHERE ENAME='KING');
+ 
+--42> Sales 부서의 모든 사원에 대한 부서번호, 이름 및 직위를 출력하라.
+ 
+  SELECT E.DEPTNO, E.ENAME, E.JOB
+  FROM EMP E JOIN DEPT D
+  ON E.DEPTNO = D.DEPTNO
+  WHERE D.DNAME='SALES';
+ 
+ 
+--43> 자신의 급여가 평균 급여보다 많고 이름에 T가 들어가는 사원과 동일한
+-- 부서에 근무하는 모든 사원의 사원 번호, 이름 및 급여를 출력하라.
+ 
+ SELECT EMPNO, ENAME, SAL
+ FROM EMP
+ WHERE SAL > (SELECT AVG(SAL) FROM EMP)
+ AND DEPTNO IN (SELECT DEPTNO FROM EMP WHERE ENAME LIKE '%T%')
+ ;
+ 
+ SELECT EMPNO, ENAME, SAL
+FROM EMP
+WHERE SAL > (SELECT AVG(SAL)
+  FROM EMP)
+AND DEPTNO IN(SELECT DEPTNO
+  FROM EMP
+  WHERE ENAME LIKE '%T%')
+--44> 커미션을 받는 사원과 급여가 일치하는 사원의 이름,부서번호,급여를 
+-- 출력하라.
+ 
+ SELECT ENAME, DEPTNO, SAL
+ FROM EMP 
+ WHERE SAL IN (
+   SELECT SAL
+   FROM EMP 
+   WHERE COMM IS NOT NULL)
+ ;
+ 
+ SELECT E.ENAME, D.DNAME, E.SAL
+FROM EMP E, DEPT D
+WHERE E.DEPTNO=D.DEPTNO
+AND E.JOB IN(SELECT E.JOB
+  FROM EMP E, DEPT D
+  WHERE E.DEPTNO=D.DEPTNO
+  AND D.LOC='DALLAS')
+  
+--45> Dallas에서 근무하는 사원과 직업이 일치하는 사원의 이름,부서이름,
+--     및 급여를 출력하시오
+ 
+ SELECT E.ENAME, D.DNAME, E.SAL
+ FROM EMP E JOIN DEPT D
+ ON E.DEPTNO = D.DEPTNO
+ WHERE E.JOB IN (
+   SELECT JOB
+   FROM EMP
+   WHERE DEPTNO =(
+     SELECT DEPTNO
+     FROM DEPT
+     WHERE LOC='DALLAS'
+   )
+ );
+ 
+ 
+--46> Scott과 동일한 급여 및 커미션을 받는 모든 사원의 이름, 입사일 및 
+-- 급여를 출력하시오
+SELECT *
+FROM EMP
+WHERE SAL =(
+   SELECT SAL
+   FROM EMP 
+   WHERE ENAME='SCOTT'
+)
+AND NVL(COMM,0) = (
+   SELECT NVL(COMM,0)
+   FROM EMP 
+   WHERE ENAME='SCOTT'
+);
+ 
+ SELECT ENAME, HIREDATE, SAL
+FROM EMP
+WHERE SAL=(SELECT SAL
+  FROM EMP
+  WHERE ENAME='SCOTT')
+AND NVL(COMM,0)=(SELECT NVL(COMM,0)
+  FROM EMP
+  WHERE ENAME='SCOTT');
+ 
+--47> 직업이 Clerk 인 사원들보다 더 많은 급여를 받는 사원의 사원번호,
+-- 이름, 급여를 출력하되, 결과를 급여가 높은 순으로 정렬하라.
+ 
+ SELECT EMPNO, ENAME, SAL
+ FROM EMP
+ WHERE SAL > (
+   SELECT MAX(SAL)
+   FROM EMP
+   WHERE JOB='CLERK'
+ )
+ ORDER BY SAL DESC;
+ 
+ SELECT EMPNO, ENAME, SAL
+FROM EMP
+WHERE SAL>ALL(SELECT SAL
+  FROM EMP
+  WHERE JOB='CLERK') --결국 최대값과 비교 any 최소값과 비교
+ORDER BY SAL DESC;
+  
+--48> 이름에 A가 들어가는 사원과 같은 직업을 가진 사원의 이름과
+-- 월급, 부서번호를 출력하라.
+ SELECT ENAME, SAL, DEPTNO
+ FROM EMP 
+ WHERE JOB IN (
+   SELECT JOB
+   FROM EMP
+   WHERE ENAME LIKE '%A%'
+ );
+ 
+ SELECT ENAME, SAL, DEPTNO
+FROM EMP
+WHERE JOB IN(SELECT JOB
+  FROM EMP
+  WHERE ENAME LIKE '%A%');
+ 
+--49> New  York 에서 근무하는 사원과 급여 및 커미션이 같은 사원의 
+-- 사원이름과 부서명을 출력하라.
+ 
+ SELECT A.ENAME, D.DNAME
+ FROM EMP A JOIN 
+(SELECT *
+ FROM EMP
+ WHERE DEPTNO =(
+   SELECT DEPTNO
+   FROM DEPT
+   WHERE LOC='NEW YORK'
+ ) )B
+ ON A.SAL = B.SAL
+ AND NVL(A.COMM,0) = NVL(B.COMM,0)
+           JOIN DEPT D
+ ON A.DEPTNO = D.DEPTNO
+ ;
+ 
+ select * from emp join dept 
+on emp.deptno = dept.deptno
+and dept.loc='NEW YORK';
+ 
+SELECT E.ENAME, D.DNAME
+FROM EMP E, DEPT D
+WHERE
+e.deptno= d.deptno
+AND E.SAL IN(
+          SELECT E.SAL
+                FROM EMP E, DEPT D
+                WHERE E.DEPTNO=D.DEPTNO AND LOC='NEW YORK'
+                  )
+AND NVL(COMM,0) IN(
+               SELECT NVL(COMM,0)
+               FROM EMP E, DEPT D
+               WHERE E.DEPTNO=D.DEPTNO
+                              AND LOC='NEW YORK');
+ 
+--50> Dallas에서 근무하는 사원과 직업 및 관리자가 같은 사원의 사원번호,사원이름,
+--    직업,월급,부서명,커미션을 출력하되 커미션이 책정되지 않은 사원은 NoCommission
+--    으로 표시하고, 커미션의 컬럼명은 Comm으로 나오게 출력하시오.
+--    단, 최고월급부터 출력되게 하시오
+
+SELECT DISTINCT A.EMPNO, A.ENAME, A.JOB, A.SAL, B.DNAME, NVL(TO_CHAR(A.COMM), 'NoCommission') as Comm
+FROM EMP A JOIN (
+SELECT E.JOB, E.MGR , D.DNAME
+FROM EMP E JOIN DEPT D
+ON E.DEPTNO = D.DEPTNO
+WHERE D.LOC='DALLAS') B
+ON A.JOB=B.JOB
+AND A.MGR=B.MGR
+ORDER BY A.SAL DESC;
+
+
+SELECT E.EMPNO, E.ENAME, E.JOB, E.SAL, D.DNAME,
+NVL((TO_CHAR(E.COMM)),'NoCommision') AS "COMM"
+FROM EMP E, DEPT D
+WHERE E.DEPTNO=D.DEPTNO
+AND JOB IN(SELECT JOB
+  FROM EMP E, DEPT D
+  WHERE E.DEPTNO=D.DEPTNO AND LOC='DALLAS')
+AND MGR IN(SELECT MGR
+  FROM EMP E, DEPT D
+  WHERE E.DEPTNO=D.DEPTNO AND LOC='DALLAS')
