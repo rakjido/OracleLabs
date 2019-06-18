@@ -681,7 +681,12 @@ CREATE OR REPLACE PROCEDURE usp_insert_emp
     END;
 
 
-
+DECLARE
+  out_msg varchar2(200);
+BEGIN
+   usp_insert_emp(5655,'홍길동','IT', out_msg);
+   DBMS_OUTPUT.put_line('출력값 : ' || out_msg);
+END;
 
 
 
@@ -907,7 +912,7 @@ as
 
 create or replace trigger emp_audit_tr
  after insert or update or delete on emp2
- --for each row
+for each row
 begin
  if inserting then
       insert into emp_audit
